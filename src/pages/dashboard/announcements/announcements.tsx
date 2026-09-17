@@ -33,7 +33,7 @@ const SafeAnnouncement = ({
     excludedClickOutsideClass,
     appElement,
 }: any) => {
-    if (typeof Announcement !== 'function') return null;
+    if (!Announcement) return null;
 
     return (
         <Announcement
@@ -47,6 +47,11 @@ const SafeAnnouncement = ({
             {...(appElement ? { appElement } : {})}
         />
     );
+};
+
+const SafeBullhornIcon = (props: any) => {
+    if (typeof StandaloneBullhornRegularIcon !== 'function') return <span aria-hidden='true' />;
+    return <StandaloneBullhornRegularIcon {...props} />;
 };
 
 const Announcements = observer(({ is_mobile, is_tablet, handleTabChange }: TAnnouncements) => {
@@ -183,7 +188,7 @@ const Announcements = observer(({ is_mobile, is_tablet, handleTabChange }: TAnno
                 onClick={() => setIsOpenAnnounceList(prevState => !prevState)}
                 data-testid='btn-announcements'
             >
-                <StandaloneBullhornRegularIcon fill='var(--icon-black-plus)' iconSize='sm' />
+                <SafeBullhornIcon fill='var(--icon-black-plus)' iconSize='sm' />
                 {!is_mobile && (
                     <Text size='xs' line_height='s' className={action_button_class_name}>
                         {localize('Announcements')}
