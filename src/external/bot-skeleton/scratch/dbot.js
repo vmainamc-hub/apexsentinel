@@ -19,6 +19,7 @@ class DBot {
         this.before_run_funcs = [];
         this.symbol = null;
         this.is_bot_running = false;
+        this.stop_promise = null;
     }
 
     /**
@@ -282,7 +283,9 @@ class DBot {
             api_base.setIsRunning(true);
             this.interpreter.run(code).catch(error => {
                 globalObserver.emit('Error', error);
-                this.stopBot();
+                this.stopBot().catch(stop_error => {
+                    globalObserver.emit('Error', stop_error);
+                });
             });
         } catch (error) {
             globalObserver.emit('Error', error);
@@ -373,16 +376,41 @@ class DBot {
      * that trade will be completed first to reflect correct contract status in UI.
      */
     async stopBot() {
-        if (api_base.is_stopping) return;
+        if (this.stop_promise) return this.stop_promise;
 
+        const interpreter = this.interpreter;
+        this.is_bot_running = false;
         api_base.setIsRunning(false);
 
-        await this.interpreter.stop();
-        this.is_bot_running = false;
-        this.interpreter = null;
-        this.interpreter = Interpreter();
-        await this.interpreter.bot.tradeEngine.watchTicks(this.symbol);
-        forgetAccumulatorsProposalRequest(this);
+        this.stop_promise = (async () => {
+            try {
+                if (interpreter) {
+                    await interpreter.stop();
+                }
+
+                // Only replace the interpreter that this stop operation actually stopped.
+                // This prevents a concurrent run/stop cycle from destroying a newer session.
+                if (this.interpreter === interpreter) {
+                    this.interpreter = null;
+                    this.interpreter = Interpreter();
+                    if (this.symbol) {
+                        try {
+                            await this.interpreter.bot.tradeEngine.watchTicks(this.symbol);
+                        } catch (error) {
+                            globalObserver.emit('Error', error);
+                        }
+                    }
+                }
+
+                forgetAccumulatorsProposalRequest(this);
+            } catch (error) {
+                globalObserver.emit('Error', error);
+            } finally {
+                this.stop_promise = null;
+            }
+        })();
+
+        return this.stop_promise;
     }
 
     /**
