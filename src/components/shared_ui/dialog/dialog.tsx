@@ -3,7 +3,6 @@ import classNames from 'classnames';
 import ReactDOM from 'react-dom';
 import { CSSTransition } from 'react-transition-group';
 import { useOnClickOutside } from '@/hooks/useOnClickOutside';
-import { LegacyClose1pxIcon } from '@deriv/quill-icons/Legacy';
 import { localize } from '@deriv-com/translations';
 import Button from '../button';
 import Text from '../text';
@@ -157,14 +156,25 @@ const Dialog = ({
                                 </Text>
                             )}
                             {has_close_icon && (
-                                <div onClick={handleClose} className='dc-dialog__header--close'>
-                                    <LegacyClose1pxIcon
-                                        height='20px'
-                                        width='20px'
-                                        fill='var(--text-general)'
-                                        className='icon-general-fill-path'
-                                    />
-                                </div>
+                                <button
+                                    type='button'
+                                    onClick={handleClose}
+                                    className='dc-dialog__header--close'
+                                    aria-label={localize('Close')}
+                                    style={{
+                                        appearance: 'none',
+                                        border: 0,
+                                        background: 'transparent',
+                                        padding: 0,
+                                        margin: 0,
+                                        cursor: 'pointer',
+                                        fontSize: '22px',
+                                        lineHeight: 1,
+                                        color: 'var(--text-general)',
+                                    }}
+                                >
+                                    ×
+                                </button>
                             )}
                         </div>
                     )}
