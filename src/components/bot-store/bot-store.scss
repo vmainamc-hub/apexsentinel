@@ -24,13 +24,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px;
+    padding: 16px;
     background: rgba(0, 0, 0, 0.62);
 }
 
 .bot-store {
-    width: min(920px, 100%);
-    max-height: min(760px, 92vh);
+    width: min(980px, 100%);
+    max-height: min(820px, 94vh);
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -44,7 +44,7 @@
     display: flex;
     justify-content: space-between;
     gap: 20px;
-    padding: 22px 24px 16px;
+    padding: 18px 20px 13px;
     border-bottom: 1px solid var(--general-section-1, #e5e5e5);
 }
 
@@ -56,8 +56,8 @@
 }
 
 .bot-store__header h2 {
-    margin: 4px 0;
-    font-size: 25px;
+    margin: 3px 0;
+    font-size: 23px;
 }
 
 .bot-store__header p,
@@ -67,8 +67,9 @@
 }
 
 .bot-store__close {
-    width: 38px;
-    height: 38px;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
     border: 0;
     border-radius: 50%;
     background: var(--general-section-1, #eee);
@@ -79,13 +80,14 @@
 .bot-store__toolbar {
     display: flex;
     align-items: center;
-    gap: 14px;
-    padding: 14px 24px;
+    gap: 10px;
+    padding: 10px 20px;
     border-bottom: 1px solid var(--general-section-1, #e5e5e5);
 }
 
 .bot-store__toolbar span {
-    font-size: 13px;
+    margin-left: auto;
+    font-size: 12px;
     opacity: 0.65;
 }
 
@@ -94,7 +96,7 @@
 .bot-card__load {
     border: 0;
     border-radius: 8px;
-    padding: 10px 14px;
+    padding: 9px 12px;
     background: var(--button-primary, #ff444f);
     color: #fff;
     font-weight: 700;
@@ -114,7 +116,7 @@
 .bot-store__body {
     flex: 1;
     overflow: auto;
-    padding: 18px 24px;
+    padding: 12px 20px;
 }
 
 .bot-store__empty {
@@ -124,14 +126,14 @@
 }
 
 .bot-card {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    justify-content: space-between;
-    gap: 18px;
-    padding: 16px;
-    margin-bottom: 12px;
+    gap: 14px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
     border: 1px solid var(--general-section-1, #e5e5e5);
-    border-radius: 12px;
+    border-radius: 10px;
 }
 
 .bot-card--selected {
@@ -143,22 +145,32 @@
 }
 
 .bot-card h3 {
-    margin: 0 0 5px;
-    font-size: 16px;
+    margin: 0 0 3px;
+    font-size: 15px;
+}
+
+.bot-card p {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    font-size: 12px;
+    line-height: 1.35;
 }
 
 .bot-card__meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 7px;
-    margin-top: 9px;
+    gap: 5px;
+    margin-top: 6px;
 }
 
 .bot-card__meta > span {
-    padding: 3px 7px;
+    padding: 3px 6px;
     border-radius: 5px;
     background: var(--general-section-1, #eee);
-    font-size: 11px;
+    font-size: 10px;
 }
 
 .bot-card__status {
@@ -167,18 +179,29 @@
 
 .bot-card__actions {
     display: flex;
-    flex-wrap: wrap;
+    align-items: center;
     justify-content: flex-end;
-    gap: 7px;
+    flex-wrap: nowrap;
+    gap: 6px;
+    flex-shrink: 0;
 }
 
 .bot-card__actions button {
     border: 1px solid var(--general-section-1, #d9d9d9);
     border-radius: 7px;
-    padding: 8px 10px;
+    padding: 7px 9px;
     background: transparent;
     color: inherit;
     cursor: pointer;
+    white-space: nowrap;
+    font-size: 12px;
+}
+
+.bot-card__actions .bot-card__load {
+    padding-inline: 13px;
+    background: var(--button-primary, #ff444f);
+    border-color: var(--button-primary, #ff444f);
+    color: #fff;
 }
 
 .bot-card__actions button:disabled {
@@ -191,20 +214,20 @@
 }
 
 .bot-store__message {
-    margin: 12px 24px 0;
-    padding: 9px 11px;
+    margin: 10px 20px 0;
+    padding: 8px 10px;
     border-radius: 7px;
     background: var(--general-section-1, #eee);
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .bot-store__footer {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding: 13px 24px;
+    gap: 3px;
+    padding: 10px 20px;
     border-top: 1px solid var(--general-section-1, #e5e5e5);
-    font-size: 11px;
+    font-size: 10px;
     opacity: 0.7;
 }
 
@@ -229,12 +252,18 @@
         flex-wrap: wrap;
     }
 
+    .bot-store__toolbar span {
+        width: 100%;
+        margin-left: 0;
+    }
+
     .bot-card {
-        align-items: flex-start;
-        flex-direction: column;
+        grid-template-columns: 1fr;
+        align-items: start;
     }
 
     .bot-card__actions {
         justify-content: flex-start;
+        flex-wrap: wrap;
     }
 }
