@@ -5,6 +5,7 @@ on:
     paths:
       - 'package.json'
       - 'package-lock.json'
+      - 'jest.config.ts'
       - 'src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js'
       - 'src/external/bot-skeleton/services/tradeEngine/trade/Ticks.js'
       - 'src/external/bot-skeleton/scratch/dbot.js'
