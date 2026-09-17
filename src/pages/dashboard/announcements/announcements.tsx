@@ -4,6 +4,7 @@ import classNames from 'classnames';
 import { observer } from 'mobx-react-lite';
 import { useNavigate } from 'react-router';
 import Text from '@/components/shared_ui/text';
+import { useStore } from '@/hooks/useStore';
 import { StandaloneBullhornRegularIcon } from '@deriv/quill-icons';
 import { localize } from '@deriv-com/translations';
 import { Notifications as Announcement } from '@deriv-com/ui';
