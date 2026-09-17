@@ -1,0 +1,212 @@
+.bot-store-trigger {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 9000;
+    border: 0;
+    border-radius: 999px;
+    padding: 11px 17px;
+    background: var(--button-primary, #ff444f);
+    color: #fff;
+    font-weight: 700;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+    cursor: pointer;
+}
+
+.bot-store-trigger__icon {
+    margin-right: 7px;
+}
+
+.bot-store-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 8999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.62);
+}
+
+.bot-store {
+    width: min(920px, 100%);
+    max-height: min(760px, 92vh);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border-radius: 16px;
+    background: var(--general-main-1, #fff);
+    color: var(--text-general, #222);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+}
+
+.bot-store__header {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 22px 24px 16px;
+    border-bottom: 1px solid var(--general-section-1, #e5e5e5);
+}
+
+.bot-store__eyebrow {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    opacity: 0.6;
+}
+
+.bot-store__header h2 {
+    margin: 4px 0;
+    font-size: 25px;
+}
+
+.bot-store__header p,
+.bot-card p {
+    margin: 0;
+    opacity: 0.7;
+}
+
+.bot-store__close {
+    width: 38px;
+    height: 38px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--general-section-1, #eee);
+    font-size: 25px;
+    cursor: pointer;
+}
+
+.bot-store__toolbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--general-section-1, #e5e5e5);
+}
+
+.bot-store__toolbar span {
+    font-size: 13px;
+    opacity: 0.65;
+}
+
+.bot-store__primary,
+.bot-card__load {
+    border: 0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    background: var(--button-primary, #ff444f);
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.bot-store__body {
+    flex: 1;
+    overflow: auto;
+    padding: 18px 24px;
+}
+
+.bot-store__empty {
+    padding: 60px 20px;
+    text-align: center;
+    opacity: 0.75;
+}
+
+.bot-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 1px solid var(--general-section-1, #e5e5e5);
+    border-radius: 12px;
+}
+
+.bot-card--selected {
+    outline: 2px solid var(--button-primary, #ff444f);
+}
+
+.bot-card__main {
+    min-width: 0;
+}
+
+.bot-card h3 {
+    margin: 0 0 5px;
+    font-size: 16px;
+}
+
+.bot-card__symbol {
+    display: inline-block;
+    margin-top: 9px;
+    padding: 3px 7px;
+    border-radius: 5px;
+    background: var(--general-section-1, #eee);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.bot-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 7px;
+}
+
+.bot-card__actions button {
+    border: 1px solid var(--general-section-1, #d9d9d9);
+    border-radius: 7px;
+    padding: 8px 10px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+}
+
+.bot-card__actions button:disabled {
+    opacity: 0.55;
+    cursor: wait;
+}
+
+.bot-card__delete {
+    opacity: 0.65;
+}
+
+.bot-store__message {
+    margin: 12px 24px 0;
+    padding: 9px 11px;
+    border-radius: 7px;
+    background: var(--general-section-1, #eee);
+    font-size: 13px;
+}
+
+.bot-store__footer {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 13px 24px;
+    border-top: 1px solid var(--general-section-1, #e5e5e5);
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+@media (max-width: 700px) {
+    .bot-store-overlay {
+        padding: 0;
+    }
+
+    .bot-store {
+        width: 100%;
+        height: 100%;
+        max-height: 100%;
+        border-radius: 0;
+    }
+
+    .bot-card {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .bot-card__actions {
+        justify-content: flex-start;
+    }
+}
