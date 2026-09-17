@@ -17,8 +17,6 @@
             top: 0;
             left: 0;
             width: 100vw;
-            // Keep the mobile run controls in the same stacking context as the drawer,
-            // so the fixed controls (z-index: 10000) can sit above the drawer (z-index: 6).
             z-index: 10001;
             height: calc(100% - env(safe-area-inset-bottom, 0));
             padding-bottom: env(safe-area-inset-bottom, 0);
@@ -284,4 +282,14 @@
     }
 
     .controls__section { min-height: 5.6rem; }
+}
+
+// Tablet and mobile use the fixed Run control supplied by RunPanel. The main
+// page toolbar also mounts TradeAnimation, which otherwise creates a duplicate
+// #db-animation__run-button and, in landscape, places that duplicate below the
+// viewport because its desktop absolute positioning is intentionally disabled.
+@include mobile-or-tablet-screen {
+    .main__run-strategy-wrapper {
+        display: none !important;
+    }
 }
