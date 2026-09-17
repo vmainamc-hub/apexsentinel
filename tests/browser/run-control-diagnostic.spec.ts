@@ -1,13 +1,10 @@
 import { expect, test } from '@playwright/test';
 
-test('diagnose landscape Run control hit target', async ({ page }) => {
-    await page.setViewportSize({ width: 844, height: 390 });
-
-    const pageErrors: string[] = [];
-    page.on('pageerror', error => pageErrors.push(error.message));
-
+async function collectRunDiagnostic(page: import('@playwright/test').Page, width: number, height: number) {
+    await page.setViewportSize({ width, height });
     await page.goto('/#bot_builder', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(1800);
+    await page.locator('#id-bot-builder').waitFor({ state: 'visible', timeout: 20000 });
+    await page.waitForFunction(() => Boolean(window.Blockly?.derivWorkspace), undefined, { timeout: 20000 });
 
     const tour = page.locator('.tour-dialog').first();
     if (await tour.count() > 0 && await tour.isVisible().catch(() => false)) {
@@ -19,20 +16,9 @@ test('diagnose landscape Run control hit target', async ({ page }) => {
     }
 
     const button = page.locator('#db-animation__run-button').first();
-    if (await button.count() === 0 || !(await button.isVisible().catch(() => false))) {
-        console.log(`LANDSCAPE_DIAGNOSTIC_RELOAD pageErrors=${JSON.stringify(pageErrors)}`);
-        await page.goto('/#bot_builder', { waitUntil: 'domcontentloaded' });
-        await page.waitForTimeout(2500);
-    }
-
-    if (await page.locator('#id-bot-builder').count() > 0 && !(await button.isVisible().catch(() => false))) {
-        await page.locator('#id-bot-builder').click().catch(() => undefined);
-        await page.waitForTimeout(1000);
-    }
-
     await button.waitFor({ state: 'visible', timeout: 20000 });
 
-    const diagnostic = await button.evaluate((element: HTMLElement) => {
+    return button.evaluate((element: HTMLElement) => {
         const rect = element.getBoundingClientRect();
         const x = rect.left + rect.width / 2;
         const y = rect.top + rect.height / 2;
@@ -44,29 +30,52 @@ test('diagnose landscape Run control hit target', async ({ page }) => {
             return {
                 tag: el.tagName,
                 id: el.id,
-                className: el.className,
+                className: typeof el.className === 'string' ? el.className : String(el.className),
                 zIndex: style.zIndex,
                 position: style.position,
                 pointerEvents: style.pointerEvents,
+                transform: style.transform,
+                overflow: style.overflow,
                 rect: { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height },
             };
         };
         return {
             button: describe(element),
             hit: describe(document.elementFromPoint(x, y)),
-            stack: document.elementsFromPoint(x, y).slice(0, 16).map(describe),
+            stack: document.elementsFromPoint(x, y).slice(0, 20).map(describe),
             ancestors: (() => {
                 const result = [] as unknown[];
                 let node: Element | null = element;
-                while (node && result.length < 16) {
+                while (node && result.length < 20) {
                     result.push(describe(node));
                     node = node.parentElement;
                 }
                 return result;
             })(),
+            deviceSignals: {
+                innerWidth: window.innerWidth,
+                innerHeight: window.innerHeight,
+                devicePixelRatio: window.devicePixelRatio,
+                drawer: describe(document.querySelector('.dc-drawer')),
+                mobileFooter: describe(document.querySelector('.controls__section')),
+                animationWrapper: describe(element.closest('.animation__wrapper')),
+            },
         };
     });
+}
 
-    console.log(`LANDSCAPE_RUN_DIAGNOSTIC ${JSON.stringify(diagnostic)}`);
-    expect(diagnostic.hit, 'Diagnostic: Run button is covered').toEqual(diagnostic.button);
+test('diagnose Run control hit target across tablet orientations', async ({ page }) => {
+    const pageErrors: string[] = [];
+    page.on('pageerror', error => pageErrors.push(error.message));
+
+    for (const viewport of [
+        { width: 390, height: 844 },
+        { width: 844, height: 390 },
+    ]) {
+        const diagnostic = await collectRunDiagnostic(page, viewport.width, viewport.height);
+        console.log(`RUN_CONTROL_DIAGNOSTIC ${viewport.width}x${viewport.height} ${JSON.stringify(diagnostic)}`);
+        expect(diagnostic.hit, `Run button is covered at ${viewport.width}x${viewport.height}`).toEqual(diagnostic.button);
+    }
+
+    if (pageErrors.length) console.log(`RUN_CONTROL_PAGE_ERRORS ${JSON.stringify(pageErrors)}`);
 });
