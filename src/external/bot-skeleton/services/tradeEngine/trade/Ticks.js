@@ -18,21 +18,33 @@ export default Engine =>
                 this.symbol = symbol;
                 const { ticksService } = this.$scope;
 
-                await ticksService.stopMonitor({
-                    symbol,
-                    key: tickListenerKey,
-                });
+                try {
+                    await ticksService.stopMonitor({
+                        symbol,
+                        key: tickListenerKey,
+                    });
+                } catch (error) {
+                    // A previous monitor may already have been removed during bot shutdown.
+                    // Do not turn that normal cleanup race into an unhandled rejection.
+                    globalObserver.emit('Error', error);
+                }
+
                 const callback = ticks => {
-                    if (this.is_proposal_subscription_required) {
-                        this.checkProposalReady();
-                    }
+                    if (this.is_proposal_subscription_required) this.checkProposalReady();
                     const lastTick = ticks.slice(-1)[0];
+                    if (!lastTick) return;
                     const { epoch } = lastTick;
                     this.store.dispatch({ type: constants.NEW_TICK, payload: epoch });
                 };
 
-                const key = await ticksService.monitor({ symbol, callback });
-                tickListenerKey = key;
+                try {
+                    const key = await ticksService.monitor({ symbol, callback });
+                    tickListenerKey = key;
+                } catch (error) {
+                    // The bot can be stopped while a new monitor is being installed.
+                    // Surface the backend problem without crashing the UI.
+                    globalObserver.emit('Error', error);
+                }
             }
         }
 
@@ -44,12 +56,9 @@ export default Engine =>
             return new Promise(resolve => {
                 this.$scope.ticksService.request({ symbol: this.symbol }).then(ticks => {
                     const ticks_list = ticks.map(tick => {
-                        if (toString) {
-                            return tick.quote.toFixed(this.getPipSize());
-                        }
+                        if (toString) return tick.quote.toFixed(this.getPipSize());
                         return tick.quote;
                     });
-
                     resolve(ticks_list);
                 });
             });
@@ -62,9 +71,7 @@ export default Engine =>
                     .then(ticks => {
                         try {
                             let last_tick = raw ? getLast(ticks) : getLast(ticks).quote;
-                            if (!raw && toString) {
-                                last_tick = last_tick.toFixed(this.getPipSize());
-                            }
+                            if (!raw && toString) last_tick = last_tick.toFixed(this.getPipSize());
                             resolve(last_tick);
                         } catch (error) {
                             reject(error);
@@ -90,10 +97,9 @@ export default Engine =>
         getLastDigitList() {
             return new Promise(resolve => this.getTicks().then(ticks => resolve(this.getLastDigitsFromList(ticks))));
         }
+
         getLastDigitsFromList(ticks) {
-            const digits = ticks.map(tick => {
-                return getLastDigit(tick.toFixed(this.getPipSize()));
-            });
+            const digits = ticks.map(tick => getLastDigit(tick.toFixed(this.getPipSize())));
             return digits;
         }
 
@@ -107,7 +113,6 @@ export default Engine =>
 
         getOhlc(args) {
             const { granularity = this.options.candleInterval || 60, field } = args || {};
-
             return new Promise(resolve =>
                 this.$scope.ticksService
                     .request({ symbol: this.symbol, granularity })
@@ -117,9 +122,7 @@ export default Engine =>
 
         getOhlcFromEnd(args) {
             const { index: i = 1 } = args || {};
-
             const index = expectPositiveInteger(Number(i), localize('Index must be a positive integer'));
-
             return new Promise(resolve => this.getOhlc(args).then(ohlc => resolve(ohlc.slice(-index)[0])));
         }
 
@@ -143,9 +146,7 @@ export default Engine =>
             };
             if (!subscription_id && !is_proposal_requested) {
                 this.is_proposal_requested_for_accumulators = true;
-                if (proposal_request) {
-                    await api_base?.api?.send(proposal_request);
-                }
+                if (proposal_request) await api_base?.api?.send(proposal_request);
             }
         }
 
@@ -156,7 +157,6 @@ export default Engine =>
                     if (data.msg_type === 'proposal') {
                         try {
                             this.subscription_id_for_accumulators = data.subscription.id;
-                            // this was done because we can multile arrays in the respone and the list comes in reverse order
                             const stat_list = (data.proposal.contract_details.ticks_stayed_in || []).flat().reverse();
                             ticks_stayed_in_list = [...stat_list, ...ticks_stayed_in_list];
                             if (ticks_stayed_in_list.length > 0) resolve(ticks_stayed_in_list);
@@ -171,17 +171,14 @@ export default Engine =>
 
         async fetchStatsForAccumulators() {
             try {
-                // request stats for accumulators
                 const debouncedAccumulatorsRequest = debounce(() => this.requestAccumulatorStats(), 300);
                 debouncedAccumulatorsRequest();
-                // wait for proposal response
                 const ticks_stayed_in_list = await this.handleOnMessageForAccumulators();
                 return ticks_stayed_in_list;
             } catch (error) {
                 globalObserver.emit('Error in subscription promise:', error);
                 throw error;
             } finally {
-                // forget all proposal subscriptions so we can fetch new stats data on new call
                 await api_base?.api?.send({ forget_all: 'proposal' });
                 this.is_proposal_requested_for_accumulators = false;
                 this.subscription_id_for_accumulators = null;
@@ -200,10 +197,9 @@ export default Engine =>
         async getStatList() {
             try {
                 const ticks_stayed_in = await this.fetchStatsForAccumulators();
-                // we need to send only lastest 100 ticks
                 return ticks_stayed_in?.slice(0, 100);
             } catch (error) {
-                globalObserver.emit('Error fetching current stat:', error);
+                globalObserver.emit('Error fetching stat list:', error);
             }
         }
 
@@ -212,26 +208,16 @@ export default Engine =>
                 try {
                     const ticks = [];
                     const symbol = this.symbol;
-
                     const resolveAndExit = () => {
-                        this.$scope.ticksService.stopMonitor({
-                            symbol,
-                            key: '',
-                        });
+                        this.$scope.ticksService.stopMonitor({ symbol, key: '' });
                         resolve(ticks);
                         ticks.length = 0;
                     };
-
                     const watchTicks = tick_list => {
                         ticks.push(tick_list);
-                        const current_tick = ticks.length;
-                        if (current_tick === tick_value) {
-                            resolveAndExit();
-                        }
+                        if (ticks.length === tick_value) resolveAndExit();
                     };
-
                     const delayExecution = tick_list => watchTicks(tick_list);
-
                     if (Number(tick_value) <= 0) resolveAndExit();
                     this.$scope.ticksService.monitor({ symbol, callback: delayExecution });
                 } catch (error) {
