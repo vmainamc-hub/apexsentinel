@@ -1,5 +1,4 @@
 // @ts-nocheck — vendored bot code with known upstream type gaps; see AGENTS.md
-// Removed unused React import - React 17+ JSX transform doesn't require it
 import Text from '@/components/shared_ui/text';
 import { Icon } from '@/utils/tmp/dummy';
 import { LabelPairedCircleInfoCaptionBoldIcon } from '@deriv/quill-icons';
@@ -39,16 +38,17 @@ export const MessageAnnounce = ({ message, date, announce }: { message: string; 
 );
 
 export const IconAnnounceModal = ({ announce_id }: { announce_id: string }) => {
+    // This helper is optional in some standalone builds. Never hand React an
+    // undefined element type if the legacy icon adapter is absent.
+    if (!Icon) return null;
+
     switch (announce_id) {
-        case 'MOVING_STRATEGIES_ANNOUNCE': {
+        case 'MOVING_STRATEGIES_ANNOUNCE':
             return <Icon icon='IcMigrateStrategy' className='category-type' style={{ height: 100, width: 140 }} />;
-        }
-        case 'BLOCKLY_ANNOUNCE': {
+        case 'BLOCKLY_ANNOUNCE':
             return <Icon icon='IcUpgradeBlockly' className='category-type' style={{ height: 120, width: 120 }} />;
-        }
-        case 'ACCUMULATOR_ANNOUNCE': {
+        case 'ACCUMULATOR_ANNOUNCE':
             return <Icon icon='IcTradetypeAccu' className='category-type' style={{ height: 80, width: 80 }} />;
-        }
         default:
             return null;
     }
