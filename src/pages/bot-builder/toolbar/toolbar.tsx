@@ -52,6 +52,7 @@ const Toolbar = observer(() => {
                 is_mobile_full_width={false}
                 className={'toolbar__dialog'}
                 has_close_icon
+                dismissable={false}
             >
                 {is_running ? (
                     <Localize
