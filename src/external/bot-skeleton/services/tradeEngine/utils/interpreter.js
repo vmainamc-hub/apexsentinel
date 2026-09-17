@@ -30,6 +30,7 @@ const shouldStopOnError = (bot, errorName = '') => {
 };
 
 const timeMachineEnabled = bot => botInitialized(bot) && bot.tradeEngine.options.timeMachineEnabled;
+const STOP_CONTRACT_WAIT_TIMEOUT_MS = 15000;
 
 const Interpreter = () => {
     let $scope = createScope();
@@ -87,63 +88,21 @@ const Interpreter = () => {
         return js_interpreter.createAsyncFunction(asyncFunc);
     }
 
-    function initFunc(js_interpreter, scope) {
-        const bot_interface = bot.getInterface();
-        const { getTicksInterface, alert, prompt, sleep, console: custom_console } = bot_interface;
-        const ticks_interface = getTicksInterface;
-
-        js_interpreter.setProperty(scope, 'console', js_interpreter.nativeToPseudo(custom_console));
-        js_interpreter.setProperty(scope, 'alert', js_interpreter.nativeToPseudo(alert));
-        js_interpreter.setProperty(scope, 'prompt', js_interpreter.nativeToPseudo(prompt));
-        js_interpreter.setProperty(scope, 'getPurchaseReference', js_interpreter.nativeToPseudo(bot_interface.getPurchaseReference));
-
-        const pseudo_bot_interface = js_interpreter.nativeToPseudo(bot_interface);
-        Object.entries(ticks_interface).forEach(([name, f]) =>
-            js_interpreter.setProperty(pseudo_bot_interface, name, createAsync(js_interpreter, f))
-        );
-
-        js_interpreter.setProperty(
-            pseudo_bot_interface,
-            'start',
-            js_interpreter.nativeToPseudo((...args) => {
-                const { start } = bot_interface;
-                if (shouldRestartOnError(bot)) $scope.startState = js_interpreter.takeStateSnapshot();
-                start(...args);
-            })
-        );
-
-        js_interpreter.setProperty(pseudo_bot_interface, 'purchase', createAsync(js_interpreter, bot_interface.purchase));
-        js_interpreter.setProperty(pseudo_bot_interface, 'sellAtMarket', createAsync(js_interpreter, bot_interface.sellAtMarket));
-        js_interpreter.setProperty(scope, 'Bot', pseudo_bot_interface);
-        js_interpreter.setProperty(
-            scope,
-            'watch',
-            createAsync(js_interpreter, watchName => {
-                const { watch } = bot.getInterface();
-                if (timeMachineEnabled(bot)) {
-                    const snapshot = interpreter.takeStateSnapshot();
-                    if (watchName === 'before') $scope.beforeState = snapshot;
-                    else $scope.duringState = snapshot;
-                }
-                return watch(watchName);
-            })
-        );
-        js_interpreter.setProperty(scope, 'sleep', createAsync(js_interpreter, sleep));
-    }
-
     async function stop() {
         if (stopPromise) return stopPromise;
 
         stopPromise = (async () => {
+            api_base.is_stopping = true;
             try {
                 const global_timeouts = globalObserver.getState('global_timeouts') ?? [];
-                const is_timeouts_cancellable = Object.keys(global_timeouts).every(
-                    timeout => global_timeouts[timeout].is_cancellable
-                );
+                const timeoutEntries = Object.entries(global_timeouts);
+                const is_timeouts_cancellable = timeoutEntries.every(([, timeout]) => timeout?.is_cancellable !== false);
 
                 if (!bot.tradeEngine.contractId && is_timeouts_cancellable) {
-                    api_base.is_stopping = true;
-                    global_timeouts.forEach(timeout => clearTimeout(global_timeouts[timeout]));
+                    timeoutEntries.forEach(([, timeout]) => {
+                        const handle = timeout?.handle ?? timeout?.timer ?? timeout;
+                        if (handle != null) clearTimeout(handle);
+                    });
                     await terminateSession();
                 } else if (
                     bot.tradeEngine.isSold === false &&
@@ -151,14 +110,32 @@ const Interpreter = () => {
                     isMultiplierContract(bot?.tradeEngine?.data?.contract?.contract_type ?? '')
                 ) {
                     await new Promise(resolve => {
-                        globalObserver.register('contract.status', contractStatus => {
-                            if (contractStatus.id === 'contract.sold') resolve();
-                        });
+                        let timeout_id;
+                        const onContractStatus = contractStatus => {
+                            if (contractStatus.id !== 'contract.sold') return;
+                            clearTimeout(timeout_id);
+                            globalObserver.unregister('contract.status', onContractStatus);
+                            resolve();
+                        };
+                        globalObserver.register('contract.status', onContractStatus);
+                        timeout_id = setTimeout(() => {
+                            globalObserver.unregister('contract.status', onContractStatus);
+                            console.warn('[DBot] Timed out waiting for contract.sold during stop; terminating session safely.');
+                            resolve();
+                        }, STOP_CONTRACT_WAIT_TIMEOUT_MS);
                     });
                     await terminateSession();
                 } else {
-                    api_base.is_stopping = true;
                     await terminateSession();
+                }
+            } catch (error) {
+                // Stop is a lifecycle action. Cleanup failures must not enter the global Error
+                // channel, because that channel is also consumed by the fatal UI error boundary.
+                console.error('[DBot] Stop lifecycle error; forcing safe termination:', error);
+                try {
+                    await terminateSession();
+                } catch (terminationError) {
+                    console.error('[DBot] Forced termination also failed:', terminationError);
                 }
             } finally {
                 api_base.is_stopping = false;
@@ -180,11 +157,17 @@ const Interpreter = () => {
             $scope.is_error_triggered = false;
             globalObserver.emit('bot.stop');
             const { ticksService } = $scope;
-            api_base.clearSubscriptions();
+
+            try {
+                api_base.clearSubscriptions();
+            } catch (error) {
+                console.warn('[DBot] Subscription cleanup warning during stop:', error);
+            }
+
             try {
                 await ticksService.unsubscribeFromTicksService();
             } catch (error) {
-                globalObserver.emit('Error', error);
+                console.warn('[DBot] Tick-service cleanup warning during stop:', error);
             }
         })();
 
@@ -200,7 +183,7 @@ const Interpreter = () => {
         try {
             await ticksService.unsubscribeFromTicksService();
         } catch (e) {
-            globalObserver.emit('Error', e);
+            console.warn('[DBot] Tick-service unsubscribe warning:', e);
         }
     }
 
