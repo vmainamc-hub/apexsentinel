@@ -7,6 +7,9 @@ on:
       - 'src/external/bot-skeleton/services/tradeEngine/trade/Ticks.js'
       - 'src/external/bot-skeleton/scratch/dbot.js'
       - 'src/external/bot-skeleton/scratch/__tests__/dbot-lifecycle.runtime.spec.js'
+      - 'src/app/app-content.jsx'
+      - 'src/pages/dashboard/announcements/announcements.tsx'
+      - 'src/pages/dashboard/announcements/config.tsx'
       - '.github/workflows/repair-dbot-shutdown.yml'
 
 jobs:
