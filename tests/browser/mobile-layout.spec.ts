@@ -85,6 +85,10 @@ test.describe('Apex Sentinel mobile/landscape UI regression', () => {
     test('Run control is visible and tappable in portrait and landscape', async ({ page }) => {
         await page.addInitScript(() => {
             const settings = JSON.parse(localStorage.getItem('dbot_settings') || '{}');
+            // Both tour guards can run during the initial Dashboard -> Bot Builder
+            // hydration transition. A returning session must have both tokens so
+            // neither onboarding dialog can cover the Run control.
+            settings.onboard_tour_token = settings.onboard_tour_token || 'browser-regression';
             settings.bot_builder_token = settings.bot_builder_token || 'browser-regression';
             localStorage.setItem('dbot_settings', JSON.stringify(settings));
         });
@@ -99,9 +103,7 @@ test.describe('Apex Sentinel mobile/landscape UI regression', () => {
             await page.waitForTimeout(1000);
 
             const tour = page.locator('.tour-dialog').first();
-            if (await tour.count() > 0 && await tour.isVisible().catch(() => false)) {
-                throw new Error('Mobile onboarding tour remained visible despite returning-user test state');
-            }
+            await expect(tour, 'Run control is covered by the Bot Builder onboarding dialog').toBeHidden({ timeout: 5000 });
 
             const runButton = page.locator('#db-animation__run-button');
             if (await runButton.count() === 0) {
