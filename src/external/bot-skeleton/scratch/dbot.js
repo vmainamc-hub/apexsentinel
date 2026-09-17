@@ -271,12 +271,14 @@ class DBot {
      * JavaScript code that's fed to the interpreter.
      */
     runBot() {
-        if (api_base.is_stopping) return;
+        const was_stopping = api_base.is_stopping;
 
         try {
             api_base.is_stopping = false;
             const code = this.generateCode();
-            if (!this.interpreter.bot.tradeEngine.checkTicksPromiseExists()) this.interpreter = Interpreter();
+            if (was_stopping || !this.interpreter || !this.interpreter.bot.tradeEngine.checkTicksPromiseExists()) {
+                this.interpreter = Interpreter();
+            }
 
             this.is_bot_running = true;
 
