@@ -69,7 +69,7 @@ const DrawerContent = ({ active_index, is_drawer_open, active_tour, setActiveTab
 };
 
 const DrawerFooter = ({ is_clear_stat_disabled, onClearStatClick }: TDrawerFooter) => <div className='run-panel__footer'><Button id='db-run-panel__clear-button' className='run-panel__footer-button' disabled={is_clear_stat_disabled} onClick={onClearStatClick} has_effect secondary><span><Localize i18n_default_text='Reset' /></span></Button></div>;
-const MobileDrawerFooter = () => <div className='controls__section'><div className='controls__buttons'><TradeAnimation className='controls__animation' should_show_overlay /></div></div>;
+const MobileDrawerFooter = () => <div className='controls__section controls__section--compact'><div className='controls__buttons'><TradeAnimation className='controls__animation' should_show_overlay /></div></div>;
 
 const StatisticsInfoModal = ({ is_mobile, is_statistics_info_modal_open, toggleStatisticsInfoModal }: TStatisticsInfoModal) => <Modal className={classNames('statistics__modal', { 'statistics__modal--mobile': is_mobile })} title={localize("What's this?")} is_open={is_statistics_info_modal_open} toggleModal={toggleStatisticsInfoModal} width={'440px'}><Modal.Body><div className={classNames('statistics__modal-body', { 'statistics__modal-body--mobile': is_mobile })}><ThemedScrollbars className='statistics__modal-scrollbar'><Text as='p' weight='bold' className='statistics__modal-body--content no-margin'><Localize i18n_default_text='Total stake' /></Text><Text as='p'><Localize i18n_default_text='Total stake since you last cleared your stats.' /></Text><Text as='p' weight='bold' className='statistics__modal-body--content'><Localize i18n_default_text='Total payout' /></Text><Text as='p'>{localize('Total payout since you last cleared your stats.')}</Text><Text as='p' weight='bold' className='statistics__modal-body--content'><Localize i18n_default_text='No. of runs' /></Text><Text as='p'><Localize i18n_default_text='The number of times your bot has run since you last cleared your stats. Each run includes the execution of all the root blocks.' /></Text><Text as='p' weight='bold' className='statistics__modal-body--content'><Localize i18n_default_text='Contracts lost' /></Text><Text as='p'><Localize i18n_default_text='The number of contracts you have lost since you last cleared your stats.' /></Text><Text as='p' weight='bold' className='statistics__modal-body--content'><Localize i18n_default_text='Contracts won' /></Text><Text as='p'>{localize('The number of contracts you have won since you last cleared your stats.')}</Text><Text as='p' weight='bold' className='statistics__modal-body--content'><Localize i18n_default_text='Total profit/loss' /></Text><Text as='p'><Localize i18n_default_text='Your total profit/loss since you last cleared your stats.' /></Text></ThemedScrollbars></div></Modal.Body></Modal>;
 
@@ -94,15 +94,11 @@ const RunPanel = observer(() => {
 
     if (!show_run_panel && isDesktop) return null;
 
-    // Keep the fixed mobile Run control outside the drawer wrapper. The wrapper changes
-    // between the closed mobile panel and the landscape drawer; making the control a
-    // sibling gives it a stable viewport-level hit-test and stacking context in both
-    // orientations without changing the DBot/Blockly execution path.
     return <>
         <div className={!isDesktop && is_drawer_open ? 'run-panel__container--mobile' : 'run-panel'}>
             <Drawer anchor='right' className={classNames('run-panel', { 'run-panel__container': isDesktop, 'run-panel__container--tour-active': isDesktop && active_tour })} contentClassName='run-panel__content' header={header} footer={isDesktop && footer} is_open={is_drawer_open} toggleDrawer={toggleDrawer} width={366} zIndex={popover_zindex.RUN_PANEL}>{content}</Drawer>
         </div>
-        {!isDesktop && <MobileDrawerFooter />}
+        <MobileDrawerFooter />
         <StatisticsInfoModal is_mobile={!isDesktop} is_statistics_info_modal_open={is_statistics_info_modal_open} toggleStatisticsInfoModal={toggleStatisticsInfoModal} />
     </>;
 });
