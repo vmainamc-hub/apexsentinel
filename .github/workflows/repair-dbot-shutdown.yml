@@ -27,6 +27,7 @@ on:
       - 'src/components/shared_ui/drawer/**'
       - 'src/constants/bot-contents.ts'
       - '.github/workflows/repair-dbot-shutdown.yml'
+  workflow_dispatch:
 
 permissions:
   contents: write
