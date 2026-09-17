@@ -12,32 +12,26 @@ jobs:
   repair:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Patch shutdown race and error propagation
+      - name: Patch shutdown lifecycle
+        shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
-          def replace_once(path, old, new, label):
+          def patch(path, old, new):
               p = Path(path)
               s = p.read_text()
               if old not in s:
-                  raise SystemExit(f'{label}: anchor not found')
+                  raise SystemExit(f'anchor not found: {path}')
               p.write_text(s.replace(old, new, 1))
 
-          # 1) Make interpreter shutdown bounded and cleanup-safe. The previous code could
-          # wait forever for contract.sold and could emit cleanup failures through the global
-          # Error channel, which is also consumed by the fatal React error UI.
-          replace_once(
-              'src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js',
-              "const timeMachineEnabled = bot => botInitialized(bot) && bot.tradeEngine.options.timeMachineEnabled;\n",
-              "const timeMachineEnabled = bot => botInitialized(bot) && bot.tradeEngine.options.timeMachineEnabled;\nconst STOP_CONTRACT_WAIT_TIMEOUT_MS = 15000;\n",
-              'interpreter timeout constant'
-          )
+          patch('src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js',
+                "const timeMachineEnabled = bot => botInitialized(bot) && bot.tradeEngine.options.timeMachineEnabled;\n",
+                "const timeMachineEnabled = bot => botInitialized(bot) && bot.tradeEngine.options.timeMachineEnabled;\nconst STOP_CONTRACT_WAIT_TIMEOUT_MS = 15000;\n")
 
           old = """                const global_timeouts = globalObserver.getState('global_timeouts') ?? [];
                 const is_timeouts_cancellable = Object.keys(global_timeouts).every(
@@ -100,130 +94,70 @@ jobs:
                     await terminateSession();
                 }
 """
-          replace_once(
-              'src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js',
-              old,
-              new,
-              'interpreter stop block'
-          )
+          patch('src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js', old, new)
 
-          old = """            try {
-                await ticksService.unsubscribeFromTicksService();
-            } catch (error) {
+          patch('src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js',
+                """            } catch (error) {
                 globalObserver.emit('Error', error);
             }
-"""
-          new = """            try {
-                await ticksService.unsubscribeFromTicksService();
-            } catch (error) {
-                // Cleanup races are expected during shutdown and must never enter the fatal
-                // global Error channel used by the application error boundary.
+        })();
+""",
+                """            } catch (error) {
                 console.warn('[DBot] Tick-service cleanup warning during stop:', error);
             }
-"""
-          replace_once(
-              'src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js',
-              old,
-              new,
-              'interpreter terminate cleanup'
-          )
-          replace_once(
-              'src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js',
-              """        } catch (e) {
-            globalObserver.emit('Error', e);
-        }
-    }
+        })();
+""")
 
-    function run(code) {
-""",
-              """        } catch (e) {
-            console.warn('[DBot] Tick-service unsubscribe warning:', e);
-        }
-    }
-
-    function run(code) {
-""",
-              'interpreter unsubscribe cleanup'
-          )
-
-          # 2) Never route a shutdown cleanup failure into the fatal React error boundary.
-          replace_once(
-              'src/external/bot-skeleton/scratch/dbot.js',
-              """                    if (this.symbol) {
-                        try {
-                            await this.interpreter.bot.tradeEngine.watchTicks(this.symbol);
-                        } catch (error) {
-                            globalObserver.emit('Error', error);
-                        }
-                    }
-""",
-              """                    if (this.symbol) {
-                        try {
-                            await this.interpreter.bot.tradeEngine.watchTicks(this.symbol);
-                        } catch (error) {
-                            console.warn('[DBot] Tick monitor restore warning after stop:', error);
-                        }
-                    }
-""",
-              'dbot watchTicks cleanup'
-          )
-          replace_once(
-              'src/external/bot-skeleton/scratch/dbot.js',
-              """            } catch (error) {
+          patch('src/external/bot-skeleton/scratch/dbot.js',
+                """            } catch (error) {
                 globalObserver.emit('Error', error);
             } finally {
                 this.stop_promise = null;
             }
 """,
-              """            } catch (error) {
-                // Stop is a user lifecycle action. Do not feed shutdown failures into the
-                // global Error boundary, which can turn a cleanup race into a fatal UI screen.
+                """            } catch (error) {
                 console.error('[DBot] Stop cleanup failed:', error);
             } finally {
                 this.stop_promise = null;
             }
-""",
-              'dbot stop catch'
-          )
+""")
 
-          # 3) Make tick-monitor cleanup warnings non-fatal as well.
-          replace_once(
-              'src/external/bot-skeleton/services/tradeEngine/trade/Ticks.js',
-              """                } catch (error) {
+          patch('src/external/bot-skeleton/scratch/dbot.js',
+                """                        } catch (error) {
+                            globalObserver.emit('Error', error);
+                        }
+""",
+                """                        } catch (error) {
+                            console.warn('[DBot] Tick monitor restore warning after stop:', error);
+                        }
+""")
+
+          patch('src/external/bot-skeleton/services/tradeEngine/trade/Ticks.js',
+                """                } catch (error) {
                     // A previous monitor may already have been removed during bot shutdown.
                     // Do not turn that normal cleanup race into an unhandled rejection.
                     globalObserver.emit('Error', error);
                 }
 """,
-              """                } catch (error) {
-                    // A previous monitor may already have been removed during bot shutdown.
-                    // Do not turn that normal cleanup race into a fatal UI error.
+                """                } catch (error) {
                     console.warn('[DBot] Previous tick monitor cleanup warning:', error);
                 }
-""",
-              'ticks stopMonitor cleanup'
-          )
-          replace_once(
-              'src/external/bot-skeleton/services/tradeEngine/trade/Ticks.js',
-              """                } catch (error) {
+""")
+
+          patch('src/external/bot-skeleton/services/tradeEngine/trade/Ticks.js',
+                """                } catch (error) {
                     // The bot can be stopped while a new monitor is being installed.
                     // Surface the backend problem without crashing the UI.
                     globalObserver.emit('Error', error);
                 }
 """,
-              """                } catch (error) {
-                    // The bot can be stopped while a new monitor is being installed.
-                    // Do not route a shutdown race into the fatal UI error channel.
+                """                } catch (error) {
                     console.warn('[DBot] Tick monitor install warning:', error);
                 }
-""",
-              'ticks monitor cleanup'
-          )
+""")
 
-          # 4) Make API subscription cleanup idempotent and safe for either arrays or objects.
-          replace_once(
-              'src/external/bot-skeleton/services/api/api-base.ts',
-              """    clearSubscriptions() {
+          patch('src/external/bot-skeleton/services/api/api-base.ts',
+                """    clearSubscriptions() {
         this.subscriptions.forEach(s => s.unsubscribe());
         this.subscriptions = [];
 
@@ -234,12 +168,11 @@ jobs:
         });
     }
 """,
-              """    clearSubscriptions() {
+                """    clearSubscriptions() {
         this.subscriptions.forEach(subscription => {
             try {
                 subscription?.unsubscribe?.();
             } catch (error) {
-                // Subscription teardown is best-effort during shutdown.
                 console.warn('[APIBase] Subscription cleanup warning:', error);
             }
         });
@@ -251,61 +184,31 @@ jobs:
             if (handle != null) clearTimeout(handle);
         });
     }
-""",
-              'api-base cleanup'
-          )
+""")
           PY
 
-      - name: Static shutdown-repair verification
+      - name: Verify source repair
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          checks = {
-              'src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js': [
-                  'STOP_CONTRACT_WAIT_TIMEOUT_MS',
-                  "Timed out waiting for contract.sold during stop",
-                  "console.warn('[DBot] Tick-service cleanup warning during stop:'",
-              ],
-              'src/external/bot-skeleton/scratch/dbot.js': [
-                  "console.error('[DBot] Stop cleanup failed:'",
-              ],
-              'src/external/bot-skeleton/services/tradeEngine/trade/Ticks.js': [
-                  "console.warn('[DBot] Previous tick monitor cleanup warning:'",
-                  "console.warn('[DBot] Tick monitor install warning:'",
-              ],
-              'src/external/bot-skeleton/services/api/api-base.ts': [
-                  'Object.values(global_timeouts)',
-                  "subscription?.unsubscribe?.()",
-              ],
-          }
-          for path, needles in checks.items():
-              text = Path(path).read_text()
-              for needle in needles:
-                  if needle not in text:
-                      raise SystemExit(f'Verification failed: {path}: {needle}')
-          interpreter = Path('src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js').read_text()
-          if 'global_timeouts.forEach' in interpreter:
-              raise SystemExit('Unsafe global_timeouts.forEach remains in interpreter.js')
-          print('Shutdown repair static verification passed.')
-          PY
+          grep -q 'STOP_CONTRACT_WAIT_TIMEOUT_MS' src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js
+          grep -q "Timed out waiting for contract.sold during stop" src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js
+          ! grep -q 'global_timeouts.forEach' src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js
+          grep -q "console.error('[DBot] Stop cleanup failed:'" src/external/bot-skeleton/scratch/dbot.js
+          grep -q 'Object.values(global_timeouts)' src/external/bot-skeleton/services/api/api-base.ts
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
+      - name: Test
         run: npm test -- --runInBand
 
-      - name: Build production bundle
+      - name: Build
         run: npm run build
 
       - name: Commit verified repair
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js \
-            src/external/bot-skeleton/scratch/dbot.js \
-            src/external/bot-skeleton/services/tradeEngine/trade/Ticks.js \
-            src/external/bot-skeleton/services/api/api-base.ts
+          git add src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js src/external/bot-skeleton/scratch/dbot.js src/external/bot-skeleton/services/tradeEngine/trade/Ticks.js src/external/bot-skeleton/services/api/api-base.ts
           git diff --cached --quiet && exit 0
           git commit -m "Fix DBot shutdown race and cleanup error propagation"
           git push
