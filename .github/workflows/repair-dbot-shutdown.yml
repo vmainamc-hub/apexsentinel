@@ -6,6 +6,8 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - 'jest.config.ts'
+      - 'playwright.config.ts'
+      - 'tests/browser/**'
       - 'src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js'
       - 'src/external/bot-skeleton/services/tradeEngine/trade/Ticks.js'
       - 'src/external/bot-skeleton/scratch/dbot.js'
@@ -63,3 +65,11 @@ jobs:
       - name: Production build
         if: always()
         run: npm run build
+
+      - name: Install Playwright Chromium
+        if: success()
+        run: npx --yes playwright@1.55.0 install --with-deps chromium
+
+      - name: Mobile browser regression
+        if: success()
+        run: npx --yes playwright@1.55.0 test
