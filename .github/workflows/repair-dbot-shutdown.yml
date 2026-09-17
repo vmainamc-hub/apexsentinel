@@ -25,6 +25,7 @@ on:
       - 'src/components/trade-animation/**'
       - 'src/components/shared_ui/tabs/**'
       - 'src/components/shared_ui/drawer/**'
+      - 'src/components/shared/utils/screen/**'
       - 'src/constants/bot-contents.ts'
       - '.github/workflows/repair-dbot-shutdown.yml'
   workflow_dispatch:
