@@ -135,10 +135,27 @@
         overflow: hidden !important;
 
         .dc-tabs {
+            min-width: 0;
+
+            &__list {
+                overflow-x: auto;
+                overflow-y: hidden;
+                justify-content: flex-start;
+                flex-wrap: nowrap;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+
+                &::-webkit-scrollbar {
+                    display: none;
+                }
+            }
+
             &__item {
-                overflow: hidden;
-                text-overflow: ellipsis;
+                overflow: visible;
+                text-overflow: clip;
                 padding: 0 0.8rem;
+                flex: 0 0 auto;
+                min-width: 33.333%;
             }
         }
     }
@@ -221,6 +238,7 @@
         height: 6rem;
         display: flex;
         width: inherit;
+        min-width: 0;
 
         @include tablet-screen {
             max-width: 60rem;
@@ -234,16 +252,31 @@
         }
     }
 
-    &__stop-button,
-    &__run-button {
-        width: 40%;
-        border-radius: 4px 0 0 4px !important;
-    }
-
     &__animation {
         width: 100%;
         height: 4rem;
         border-radius: 0 4px 4px 0;
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+
+    .animation__wrapper {
+        width: 100%;
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+
+    .animation__run-button,
+    .animation__stop-button {
+        flex: 0 0 auto;
+        min-width: 8rem;
+        white-space: nowrap;
+    }
+
+    .animation__container {
+        min-width: 0;
+        flex: 1 1 auto;
+        overflow: hidden;
     }
 }
 
@@ -258,196 +291,27 @@
                 height: auto;
                 transform: translateX(0%);
                 transition:
-                    height 500ms,
-                    transform 500ms;
-            }
-        }
-
-        &-exit {
-            opacity: 1;
-
-            &-active {
-                opacity: 0;
-                transition: opacity 300ms;
+                    transform 0.3s ease-in-out,
+                    height 0.3s ease-in-out;
             }
         }
     }
 }
 
-.db-self-exclusion {
-    font-size: var(--text-size-xs);
-    font-weight: normal;
-    line-height: 1.43;
-    color: var(--text-general);
-
-    &__content {
-        margin: 2.4rem;
-        margin-right: 1.4rem;
-        padding-right: 1rem;
-    }
-
-    & .dc-themed-scrollbars__track--vertical {
-        right: -0.2rem;
-    }
-
-    &__dialog {
-        max-height: 500px !important;
-        width: 460px;
-    }
-
-    &__footer {
-        height: 72px;
-        display: block;
-        position: fixed;
-        width: 100%;
-        left: 0;
-        bottom: 0;
-        padding: 1.4rem;
-        border-top: 2px solid var(--general-section-2);
-
-        /* Fix for iOS devices to respect safe area */
-        @supports (-webkit-touch-callout: none) {
-            bottom: env(safe-area-inset-bottom, 0);
-            padding-bottom: calc(1.4rem + env(safe-area-inset-bottom, 0));
-        }
-
-        @include mobile-or-tablet-screen {
-            position: absolute;
-            width: 100%;
-            bottom: 40px;
-            left: 0;
-
-            /* Fix for iOS devices on mobile */
-            @supports (-webkit-touch-callout: none) {
-                bottom: calc(40px + env(safe-area-inset-bottom, 0));
-            }
-
-            &--relative {
-                position: relative;
-                margin-top: 5rem;
-            }
-        }
-
-        &-btn-group {
-            display: flex;
-            justify-content: flex-end;
-        }
-    }
-
-    &__info {
-        margin-bottom: 2rem;
-    }
-
-    &__limit-status {
-        margin: 1rem 0;
-
-        &--bold {
-            font-weight: 700;
-        }
-
-        &--danger {
-            font-weight: 700;
-            color: var(--status-danger);
-        }
-    }
-
-    &--danger {
-        color: var(--status-danger);
-    }
-
-    & .dc-btn {
-        margin-left: 0.8rem;
-    }
-}
-
-.limits__wrapper {
-    @include mobile-or-tablet-screen {
-        position: fixed;
-        z-index: 5;
-        width: 100%;
-        left: 0;
-        top: 0;
-        background: var(--general-main-1);
-
-        .db-self-exclusion {
-            height: calc(100vh - 40px);
-            display: flex;
-            justify-content: space-between;
-            flex-direction: column;
-
-            &__content {
-                margin-top: 56px;
-            }
-
-            &__form-group {
-                margin-bottom: 1.6rem;
-                display: flex;
+@media (orientation: landscape) and (max-width: 1024px) {
+    .run-panel {
+        &__content {
+            .dc-tabs__list {
+                justify-content: flex-start;
             }
         }
     }
-}
 
-.dc-modal__container_self-exclusion__modal {
-    display: flex;
-    flex-direction: row;
-    align-content: space-between;
-    width: 440px !important;
-    height: 374px !important;
-}
-
-.statistics {
-    &__modal {
-        height: 28.4rem !important;
-        width: 44rem !important;
-        font-size: 1.6rem;
-        padding: 2.4rem;
-
-        &--mobile {
-            font-size: 1.6rem !important;
-        }
-
-        &-body {
-            height: calc(100vh - 40.6rem);
-            min-height: 10rem;
-            max-height: 45rem;
-
-            &--mobile {
-                padding: 0.6rem 0 1.6rem !important;
-                height: 40.4rem;
-            }
-
-            &--content {
-                margin-top: 1rem;
-
-                &-stake {
-                    margin-top: unset;
-                    font-weight: bold;
-                }
-            }
-        }
-
-        &-scrollbar {
-            padding-right: 1.2rem;
-        }
-    }
-}
-
-.dc-modal__container_statistics__modal {
-    @include mobile-or-tablet-screen {
-        width: 31.2rem !important;
+    .controls__buttons {
+        padding-inline: 1rem;
     }
 
-    .dc-modal-body {
-        padding: 2.4rem 1.2rem 2.4rem 2.4rem;
-    }
-}
-
-.dc-dialog {
-    &__button {
-        @include mobile-or-tablet-screen {
-            flex-basis: 100%;
-            white-space: normal;
-            word-break: break-word;
-        }
+    .controls__section {
+        min-height: 5.6rem;
     }
 }
