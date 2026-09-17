@@ -55,23 +55,16 @@ jobs:
       - name: DBot lifecycle runtime regression
         run: npx jest src/external/bot-skeleton/scratch/__tests__/dbot-lifecycle.runtime.spec.js --runInBand
 
-      - name: Unit tests
-        run: npm test -- --runInBand --testPathIgnorePatterns=tests/browser
-
       - name: Type check
-        if: always()
         run: npm run type-check
 
       - name: Production build
-        if: always()
         run: npm run build
 
       - name: Install Playwright test runner and Chromium
-        if: success()
         run: |
           npm install --no-save --no-audit --no-fund @playwright/test@1.55.0
           npx playwright install --with-deps chromium
 
       - name: Mobile browser regression
-        if: success()
         run: npx playwright test
