@@ -1,5 +1,6 @@
 // @ts-nocheck — vendored bot code with known upstream type gaps; see AGENTS.md
 import React from 'react';
+import { createPortal } from 'react-dom';
 import classNames from 'classnames';
 import { observer } from 'mobx-react-lite';
 import Journal from '@/components/journal';
@@ -52,12 +53,13 @@ const DrawerHeader = ({ is_clear_stat_disabled, is_mobile, is_drawer_open, onCle
 );
 
 const DrawerContent = ({ active_index, is_drawer_open, active_tour, setActiveTabIndex, ...props }: TDrawerContent) => {
-    const { isDesktop } = useDevice();
+    const { isDesktop, isTablet } = useDevice();
+    const is_desktop_layout = isDesktop && !isTablet;
     React.useEffect(() => {
-        if (!isDesktop && is_drawer_open) document.body.style.overflow = 'hidden';
+        if (!is_desktop_layout && is_drawer_open) document.body.style.overflow = 'hidden';
         else document.body.style.overflow = '';
         return () => { document.body.style.overflow = ''; };
-    }, [is_drawer_open, isDesktop]);
+    }, [is_drawer_open, is_desktop_layout]);
     return <>
         <Tabs active_index={active_index} onTabItemClick={setActiveTabIndex} top>
             <div id='db-run-panel-tab__summary' label={<Localize i18n_default_text='Summary' />}><Summary is_drawer_open={is_drawer_open} /></div>
@@ -69,14 +71,20 @@ const DrawerContent = ({ active_index, is_drawer_open, active_tour, setActiveTab
 };
 
 const DrawerFooter = ({ is_clear_stat_disabled, onClearStatClick }: TDrawerFooter) => <div className='run-panel__footer'><Button id='db-run-panel__clear-button' className='run-panel__footer-button' disabled={is_clear_stat_disabled} onClick={onClearStatClick} has_effect secondary><span><Localize i18n_default_text='Reset' /></span></Button></div>;
-const MobileDrawerFooter = () => <div className='controls__section controls__section--compact'><div className='controls__buttons'><TradeAnimation className='controls__animation' should_show_overlay /></div></div>;
+const MobileDrawerFooter = () => {
+    const { isDesktop, isTablet } = useDevice();
+    if (isDesktop && !isTablet) return null;
+    const footer = <div className='controls__section controls__section--compact'><div className='controls__buttons'><TradeAnimation className='controls__animation' should_show_overlay /></div></div>;
+    return typeof document === 'undefined' ? null : createPortal(footer, document.body);
+};
 
 const StatisticsInfoModal = ({ is_mobile, is_statistics_info_modal_open, toggleStatisticsInfoModal }: TStatisticsInfoModal) => <Modal className={classNames('statistics__modal', { 'statistics__modal--mobile': is_mobile })} title={localize("What's this?")} is_open={is_statistics_info_modal_open} toggleModal={toggleStatisticsInfoModal} width={'440px'}><Modal.Body><div className={classNames('statistics__modal-body', { 'statistics__modal-body--mobile': is_mobile })}><ThemedScrollbars className='statistics__modal-scrollbar'><Text as='p' weight='bold' className='statistics__modal-body--content no-margin'><Localize i18n_default_text='Total stake' /></Text><Text as='p'><Localize i18n_default_text='Total stake since you last cleared your stats.' /></Text><Text as='p' weight='bold' className='statistics__modal-body--content'><Localize i18n_default_text='Total payout' /></Text><Text as='p'>{localize('Total payout since you last cleared your stats.')}</Text><Text as='p' weight='bold' className='statistics__modal-body--content'><Localize i18n_default_text='No. of runs' /></Text><Text as='p'><Localize i18n_default_text='The number of times your bot has run since you last cleared your stats. Each run includes the execution of all the root blocks.' /></Text><Text as='p' weight='bold' className='statistics__modal-body--content'><Localize i18n_default_text='Contracts lost' /></Text><Text as='p'><Localize i18n_default_text='The number of contracts you have lost since you last cleared your stats.' /></Text><Text as='p' weight='bold' className='statistics__modal-body--content'><Localize i18n_default_text='Contracts won' /></Text><Text as='p'>{localize('The number of contracts you have won since you last cleared your stats.')}</Text><Text as='p' weight='bold' className='statistics__modal-body--content'><Localize i18n_default_text='Total profit/loss' /></Text><Text as='p'><Localize i18n_default_text='Your total profit/loss since you last cleared your stats.' /></Text></ThemedScrollbars></div></Modal.Body></Modal>;
 
 const RunPanel = observer(() => {
     const { run_panel, dashboard, transactions } = useStore();
     const { client } = useStore();
-    const { isDesktop } = useDevice();
+    const { isDesktop, isTablet } = useDevice();
+    const is_desktop_layout = isDesktop && !isTablet;
     const { currency } = client;
     const { active_index, is_drawer_open, is_statistics_info_modal_open, is_clear_stat_disabled, onClearStatClick, onMount, onRunButtonClick, onUnmount, setActiveTabIndex, toggleDrawer, toggleStatisticsInfoModal } = run_panel;
     const { statistics } = transactions;
@@ -85,18 +93,18 @@ const RunPanel = observer(() => {
     const { BOT_BUILDER, CHART } = DBOT_TABS;
 
     React.useEffect(() => { onMount(); return () => onUnmount(); }, [onMount, onUnmount]);
-    React.useEffect(() => { if (!isDesktop) toggleDrawer(false); }, []);
+    React.useEffect(() => { if (!is_desktop_layout) toggleDrawer(false); }, [is_desktop_layout, toggleDrawer]);
 
-    const content = <DrawerContent active_index={active_index} currency={currency} is_drawer_open={is_drawer_open} is_mobile={!isDesktop} lost_contracts={lost_contracts} number_of_runs={number_of_runs} setActiveTabIndex={setActiveTabIndex} toggleStatisticsInfoModal={toggleStatisticsInfoModal} total_payout={total_payout} total_profit={total_profit} total_stake={total_stake} won_contracts={won_contracts} active_tour={active_tour} />;
+    const content = <DrawerContent active_index={active_index} currency={currency} is_drawer_open={is_drawer_open} is_mobile={!is_desktop_layout} lost_contracts={lost_contracts} number_of_runs={number_of_runs} setActiveTabIndex={setActiveTabIndex} toggleStatisticsInfoModal={toggleStatisticsInfoModal} total_payout={total_payout} total_profit={total_profit} total_stake={total_stake} won_contracts={won_contracts} active_tour={active_tour} />;
     const footer = <DrawerFooter is_clear_stat_disabled={is_clear_stat_disabled} onClearStatClick={onClearStatClick} />;
     const header = <DrawerHeader is_clear_stat_disabled={is_clear_stat_disabled} is_mobile={!is_desktop_layout} is_drawer_open={is_drawer_open} onClearStatClick={onClearStatClick} />;
     const show_run_panel = [BOT_BUILDER, CHART].includes(active_tab) || active_tour;
 
-    if (!show_run_panel && isDesktop) return null;
+    if (!show_run_panel && is_desktop_layout) return null;
 
     return <>
-        <div className={!isDesktop && is_drawer_open ? 'run-panel__container--mobile' : 'run-panel'}>
-            <Drawer anchor='right' className={classNames('run-panel', { 'run-panel__container': isDesktop, 'run-panel__container--tour-active': isDesktop && active_tour })} contentClassName='run-panel__content' header={header} footer={isDesktop && footer} is_open={is_drawer_open} toggleDrawer={toggleDrawer} width={366} zIndex={popover_zindex.RUN_PANEL}>{content}</Drawer>
+        <div className={!is_desktop_layout && is_drawer_open ? 'run-panel__container--mobile' : 'run-panel'}>
+            <Drawer anchor='right' className={classNames('run-panel', { 'run-panel__container': is_desktop_layout, 'run-panel__container--tour-active': is_desktop_layout && active_tour })} contentClassName='run-panel__content' header={header} footer={is_desktop_layout && footer} is_open={is_drawer_open} toggleDrawer={toggleDrawer} width={366} zIndex={popover_zindex.RUN_PANEL}>{content}</Drawer>
         </div>
         <MobileDrawerFooter />
         <StatisticsInfoModal is_mobile={!isDesktop} is_statistics_info_modal_open={is_statistics_info_modal_open} toggleStatisticsInfoModal={toggleStatisticsInfoModal} />
