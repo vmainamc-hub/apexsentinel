@@ -89,8 +89,15 @@ test.describe('Apex Sentinel mobile/landscape UI regression', () => {
         ]) {
             await page.setViewportSize(viewport);
             await page.goto('/#bot_builder', { waitUntil: 'domcontentloaded' });
-            await page.waitForTimeout(1800);
-            await page.locator('#db-animation__run-button').waitFor({ state: 'visible', timeout: 15000 });
+            await page.locator('#id-bot-builder').waitFor({ state: 'visible', timeout: 15000 });
+
+            // The app owns tab state in React/MobX; explicitly selecting the Bot Builder
+            // tab makes this regression independent of initial hash hydration timing.
+            const runButton = page.locator('#db-animation__run-button');
+            if (await runButton.count() === 0) {
+                await page.locator('#id-bot-builder').click();
+            }
+            await runButton.waitFor({ state: 'visible', timeout: 15000 });
             await assertHitTarget(page, '#db-animation__run-button', `Run button at ${viewport.width}x${viewport.height}`);
             await assertNoOverflow(page, `Bot Builder ${viewport.width}x${viewport.height}`);
         }
@@ -133,9 +140,14 @@ test.describe('Apex Sentinel mobile/landscape UI regression', () => {
             expect(geometry.panel, 'landscape drawer is missing').not.toBeNull();
             expect(geometry.controls, 'landscape controls are missing').not.toBeNull();
             expect(geometry.panelStyle?.width).toBe(`${viewport.width}px`);
-            expect(geometry.panelStyle?.top).toBe('83.2px');
+            expect(geometry.panel?.top ?? -1).toBeGreaterThanOrEqual(0);
             expect(geometry.panel?.left ?? -1).toBeGreaterThanOrEqual(-1);
             expect(geometry.panel?.right ?? Infinity).toBeLessThanOrEqual(geometry.innerWidth + 1);
+            expect(geometry.panel?.bottom ?? Infinity).toBeLessThanOrEqual(geometry.innerHeight + 1);
+            expect(geometry.panel?.top ?? -1).toBeCloseTo(
+                geometry.innerHeight - (geometry.panel?.height ?? geometry.innerHeight),
+                1
+            );
             expect(geometry.controls?.left ?? -1).toBeGreaterThanOrEqual(-1);
             expect(geometry.controls?.right ?? Infinity).toBeLessThanOrEqual(geometry.innerWidth + 1);
             expect(geometry.controls?.bottom ?? Infinity).toBeLessThanOrEqual(geometry.innerHeight + 1);
