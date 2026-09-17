@@ -80,7 +80,7 @@ const AppWrapper = observer(() => {
     const { DASHBOARD, BOT_BUILDER, BOT_STORE, CHART, TUTORIAL } = DBOT_TABS;
     const init_render = React.useRef(true);
     const hash = ['dashboard', 'bot_builder', 'bot_store', 'chart', 'tutorial'];
-    const { isDesktop } = useDevice();
+    const { isDesktop, isTablet } = useDevice();
     const location = useLocation();
     const navigate = useNavigate();
     const [left_tab_shadow, setLeftTabShadow] = useState<boolean>(false);
@@ -422,7 +422,7 @@ const AppWrapper = observer(() => {
             </div>
             <DesktopWrapper>
                 <div className='main__run-strategy-wrapper'>
-                    <RunStrategy />
+                    {!isTablet && <RunStrategy />}
                     <RunPanel />
                 </div>
                 <ChartModal />
