@@ -88,6 +88,50 @@ const Interpreter = () => {
         return js_interpreter.createAsyncFunction(asyncFunc);
     }
 
+    function initFunc(js_interpreter, scope) {
+        const bot_interface = bot.getInterface();
+        const { getTicksInterface, alert, prompt, sleep, console: custom_console } = bot_interface;
+        const ticks_interface = getTicksInterface;
+
+        js_interpreter.setProperty(scope, 'console', js_interpreter.nativeToPseudo(custom_console));
+        js_interpreter.setProperty(scope, 'alert', js_interpreter.nativeToPseudo(alert));
+        js_interpreter.setProperty(scope, 'prompt', js_interpreter.nativeToPseudo(prompt));
+        js_interpreter.setProperty(scope, 'getPurchaseReference', js_interpreter.nativeToPseudo(bot_interface.getPurchaseReference));
+
+        const pseudo_bot_interface = js_interpreter.nativeToPseudo(bot_interface);
+        Object.entries(ticks_interface).forEach(([name, f]) =>
+            js_interpreter.setProperty(pseudo_bot_interface, name, createAsync(js_interpreter, f))
+        );
+
+        js_interpreter.setProperty(
+            pseudo_bot_interface,
+            'start',
+            js_interpreter.nativeToPseudo((...args) => {
+                const { start } = bot_interface;
+                if (shouldRestartOnError(bot)) $scope.startState = js_interpreter.takeStateSnapshot();
+                start(...args);
+            })
+        );
+
+        js_interpreter.setProperty(pseudo_bot_interface, 'purchase', createAsync(js_interpreter, bot_interface.purchase));
+        js_interpreter.setProperty(pseudo_bot_interface, 'sellAtMarket', createAsync(js_interpreter, bot_interface.sellAtMarket));
+        js_interpreter.setProperty(scope, 'Bot', pseudo_bot_interface);
+        js_interpreter.setProperty(
+            scope,
+            'watch',
+            createAsync(js_interpreter, watchName => {
+                const { watch } = bot.getInterface();
+                if (timeMachineEnabled(bot)) {
+                    const snapshot = interpreter.takeStateSnapshot();
+                    if (watchName === 'before') $scope.beforeState = snapshot;
+                    else $scope.duringState = snapshot;
+                }
+                return watch(watchName);
+            })
+        );
+        js_interpreter.setProperty(scope, 'sleep', createAsync(js_interpreter, sleep));
+    }
+
     async function stop() {
         if (stopPromise) return stopPromise;
 
@@ -129,8 +173,6 @@ const Interpreter = () => {
                     await terminateSession();
                 }
             } catch (error) {
-                // Stop is a lifecycle action. Cleanup failures must not enter the global Error
-                // channel, because that channel is also consumed by the fatal UI error boundary.
                 console.error('[DBot] Stop lifecycle error; forcing safe termination:', error);
                 try {
                     await terminateSession();
