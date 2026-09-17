@@ -16,8 +16,6 @@
         height: calc(100% - 10.1rem) !important;
         top: calc(100% - 9.8rem) !important;
 
-        /* The action bar must use the whole mobile width. The old 67% width
-           could leave the Run/Stop control outside the visible action area. */
         .controls__buttons { width: 100%; }
         .controls__animation { width: 100%; }
     }
@@ -67,16 +65,20 @@
 
 @media (orientation: landscape) and (max-width: 1024px) {
     .dc-drawer {
-        height: calc(100% - 5.2rem) !important;
-        top: 5.2rem !important;
+        /* Landscape phones have little vertical space. Keep the closed handle
+           at the bottom and let the open state rise to the viewport top. */
+        height: calc(100dvh - 5.2rem) !important;
+        top: calc(100dvh - 8.8rem) !important;
+
         .controls__buttons { width: 100%; padding-inline: 1rem; }
         .controls__animation { width: 100%; }
         &__container { height: calc(100% - 3.6rem); }
     }
 
     .dc-drawer .run-panel-tab__content--mobile {
+        top: 3.6rem;
         bottom: 5.2rem;
-        height: calc(100dvh - 10.4rem);
-        max-height: calc(100dvh - 10.4rem);
+        height: auto;
+        max-height: calc(100dvh - 8.8rem);
     }
 }
