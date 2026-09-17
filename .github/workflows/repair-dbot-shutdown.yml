@@ -56,7 +56,7 @@ jobs:
         run: npx jest src/external/bot-skeleton/scratch/__tests__/dbot-lifecycle.runtime.spec.js --runInBand
 
       - name: Unit tests
-        run: npm test -- --runInBand
+        run: npm test -- --runInBand --testPathIgnorePatterns=tests/browser
 
       - name: Type check
         if: always()
@@ -66,10 +66,12 @@ jobs:
         if: always()
         run: npm run build
 
-      - name: Install Playwright Chromium
+      - name: Install Playwright test runner and Chromium
         if: success()
-        run: npx --yes playwright@1.55.0 install --with-deps chromium
+        run: |
+          npm install --no-save --no-audit --no-fund @playwright/test@1.55.0
+          npx playwright install --with-deps chromium
 
       - name: Mobile browser regression
         if: success()
-        run: npx --yes playwright@1.55.0 test
+        run: npx playwright test
