@@ -10,12 +10,32 @@ import {
 } from '@/services/bot-store.service';
 import './bot-store.scss';
 
+const BOT_STORE_CATALOGUE_URL =
+    'https://raw.githubusercontent.com/vmainamc-hub/sentinel-bot-store/main/catalogue.json';
+
+type RemoteBot = {
+    id: string;
+    name: string;
+    description?: string;
+    market?: string;
+    version?: string;
+    author?: string;
+    tags?: string[];
+    xml_url: string;
+};
+
+type RemoteCatalogue = {
+    version: number;
+    bots: RemoteBot[];
+};
+
 const BotStore = () => {
     const [isOpen, setIsOpen] = React.useState(false);
     const [bots, setBots] = React.useState<StoredBot[]>([]);
     const [selectedId, setSelectedId] = React.useState<string | null>(null);
     const [busyId, setBusyId] = React.useState<string | null>(null);
     const [message, setMessage] = React.useState('');
+    const [isSyncing, setIsSyncing] = React.useState(false);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     const refresh = React.useCallback(async () => {
@@ -26,9 +46,57 @@ const BotStore = () => {
         }
     }, []);
 
+    const syncRemoteCatalogue = React.useCallback(async () => {
+        setIsSyncing(true);
+        try {
+            const response = await fetch(BOT_STORE_CATALOGUE_URL, { cache: 'no-store' });
+            if (!response.ok) throw new Error(`Bot catalogue returned ${response.status}`);
+            const catalogue = (await response.json()) as RemoteCatalogue;
+            if (!catalogue || !Array.isArray(catalogue.bots)) throw new Error('Invalid Bot Store catalogue.');
+
+            const now = Date.now();
+            const results = await Promise.all(
+                catalogue.bots.map(async remoteBot => {
+                    const xmlResponse = await fetch(remoteBot.xml_url, { cache: 'no-store' });
+                    if (!xmlResponse.ok) throw new Error(`${remoteBot.name}: XML returned ${xmlResponse.status}`);
+                    const xml = await xmlResponse.text();
+                    const validation = validateBotXml(xml);
+                    if (!validation.valid) {
+                        throw new Error(`${remoteBot.name}: ${validation.errors[0]}`);
+                    }
+
+                    await saveStoredBot({
+                        id: remoteBot.id,
+                        name: remoteBot.name,
+                        description: remoteBot.description || 'Verified DBot strategy from the Sentinel Bot Store catalogue.',
+                        xml,
+                        symbol: remoteBot.market,
+                        version: remoteBot.version || 'DBot XML',
+                        author: remoteBot.author || 'Sentinel Bot Store',
+                        tags: remoteBot.tags,
+                        createdAt: now,
+                        updatedAt: now,
+                        validation,
+                    });
+                    return remoteBot.name;
+                })
+            );
+
+            await refresh();
+            setMessage(`${results.length} catalogue bot${results.length === 1 ? '' : 's'} synchronized and validated.`);
+        } catch (error) {
+            setMessage(error instanceof Error ? error.message : 'Unable to synchronize the Bot Store catalogue.');
+        } finally {
+            setIsSyncing(false);
+        }
+    }, [refresh]);
+
     React.useEffect(() => {
-        if (isOpen) refresh();
-    }, [isOpen, refresh]);
+        if (isOpen) {
+            void refresh();
+            void syncRemoteCatalogue();
+        }
+    }, [isOpen, refresh, syncRemoteCatalogue]);
 
     const importBot = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -81,8 +149,6 @@ const BotStore = () => {
         setBusyId(bot.id);
         setMessage('');
 
-        // Open synchronously from the user click so popup blockers are less likely to
-        // prevent DTrader from opening while the DBot XML is being validated/loaded.
         const dtraderWindow = window.open('about:blank', '_blank');
 
         try {
@@ -129,7 +195,7 @@ const BotStore = () => {
                             <div>
                                 <div className='bot-store__eyebrow'>APEX SENTINEL</div>
                                 <h2 id='bot-store-title'>Bot Store</h2>
-                                <p>Your personal library of validated DBot XML strategies.</p>
+                                <p>Verified DBot strategies from the Sentinel catalogue.</p>
                             </div>
                             <button type='button' className='bot-store__close' onClick={() => setIsOpen(false)} aria-label='Close'>×</button>
                         </header>
@@ -139,6 +205,9 @@ const BotStore = () => {
                                 + Add DBot XML
                             </button>
                             <input ref={fileInputRef} type='file' accept='.xml,application/xml,text/xml' hidden onChange={importBot} />
+                            <button type='button' className='bot-store__sync' disabled={isSyncing} onClick={() => void syncRemoteCatalogue()}>
+                                {isSyncing ? 'Syncing…' : '↻ Sync Catalogue'}
+                            </button>
                             <span>{bots.length} bot{bots.length === 1 ? '' : 's'} stored</span>
                         </div>
 
@@ -147,8 +216,8 @@ const BotStore = () => {
                         <div className='bot-store__body'>
                             {bots.length === 0 ? (
                                 <div className='bot-store__empty'>
-                                    <strong>Your Bot Store is empty.</strong>
-                                    <p>Click <b>+ Add DBot XML</b> to import an existing DBot strategy. Invalid XML and strategies without a Purchase block are rejected before storage.</p>
+                                    <strong>{isSyncing ? 'Loading Bot Store…' : 'Your Bot Store is empty.'}</strong>
+                                    <p>{isSyncing ? 'Synchronizing the GitHub catalogue and validating each DBot XML.' : 'Add a DBot XML or synchronize the Sentinel catalogue.'}</p>
                                 </div>
                             ) : (
                                 bots.map(bot => (
@@ -175,8 +244,8 @@ const BotStore = () => {
                         </div>
 
                         <footer className='bot-store__footer'>
-                            <span><b>Load</b> validates the stored XML, waits for the live DBot Blockly workspace, imports the exact strategy, then opens DTrader for the configured symbol.</span>
-                            <span><b>Important:</b> DTrader is a separate interface and does not import DBot XML.</span>
+                            <span><b>Load</b> validates the stored XML, imports the exact strategy into the live DBot Blockly workspace, then opens DTrader for the configured market.</span>
+                            <span><b>Source:</b> the public Sentinel bot catalogue in GitHub. The XML files themselves are kept unchanged.</span>
                         </footer>
                     </section>
                 </div>
