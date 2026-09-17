@@ -19,6 +19,10 @@ on:
       - 'src/pages/bot-builder/**'
       - 'src/pages/bot-store/**'
       - 'src/components/bot-store/**'
+      - 'src/components/run-panel/**'
+      - 'src/components/trade-animation/**'
+      - 'src/components/shared_ui/tabs/**'
+      - 'src/components/shared_ui/drawer/**'
       - 'src/constants/bot-contents.ts'
       - '.github/workflows/repair-dbot-shutdown.yml'
 
