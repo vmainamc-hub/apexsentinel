@@ -1,5 +1,5 @@
 /* eslint-disable no-promise-executor-return */
-// Shutdown repair verification trigger; no runtime behavior change.
+// Shutdown repair verification trigger; runtime behavior unchanged.
 import debounce from 'lodash.debounce';
 import { getLocalizedErrorMessage } from '@/constants/backend-error-messages';
 import { localize } from '@deriv-com/translations';
