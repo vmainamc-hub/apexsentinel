@@ -429,6 +429,7 @@ const AppWrapper = observer(() => {
                 <TradingViewModal />
             </DesktopWrapper>
             <MobileWrapper>
+                <RunPanel />
                 <Dialog
                     title={title}
                     message={message}
