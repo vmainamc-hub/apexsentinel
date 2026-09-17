@@ -5,6 +5,7 @@ on:
     paths:
       - 'src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js'
       - 'src/external/bot-skeleton/services/tradeEngine/trade/Ticks.js'
+      - 'src/external/bot-skeleton/scratch/dbot.js'
       - '.github/workflows/repair-dbot-shutdown.yml'
 
 jobs:
@@ -20,7 +21,9 @@ jobs:
         run: npm test -- --runInBand
 
       - name: Type check
+        if: always()
         run: npm run type-check
 
       - name: Production build
+        if: always()
         run: npm run build
