@@ -1,0 +1,55 @@
+name: Repair DBot shutdown lifecycle
+
+on:
+  push:
+    paths:
+      - '.github/workflows/repair-dbot-shutdown.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch DBot shutdown lifecycle
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/external/bot-skeleton/scratch/dbot.js')
+          s = p.read_text()
+
+          old = """        this.symbol = null;\n        this.is_bot_running = false;\n"""
+          new = """        this.symbol = null;\n        this.is_bot_running = false;\n        this.stop_promise = null;\n"""
+          if old not in s:
+              raise SystemExit('constructor anchor not found')
+          s = s.replace(old, new, 1)
+
+          old = """            this.interpreter.run(code).catch(error => {\n                globalObserver.emit('Error', error);\n                this.stopBot();\n            });\n"""
+          new = """            this.interpreter.run(code).catch(error => {\n                globalObserver.emit('Error', error);\n                this.stopBot().catch(stop_error => {\n                    globalObserver.emit('Error', stop_error);\n                });\n            });\n"""
+          if old not in s:
+              raise SystemExit('runBot catch anchor not found')
+          s = s.replace(old, new, 1)
+
+          old = """    async stopBot() {\n        if (api_base.is_stopping) return;\n\n        api_base.setIsRunning(false);\n\n        await this.interpreter.stop();\n        this.is_bot_running = false;\n        this.interpreter = null;\n        this.interpreter = Interpreter();\n        await this.interpreter.bot.tradeEngine.watchTicks(this.symbol);\n        forgetAccumulatorsProposalRequest(this);\n    }\n"""
+          new = """    async stopBot() {\n        if (this.stop_promise) return this.stop_promise;\n\n        const interpreter = this.interpreter;\n        this.is_bot_running = false;\n        api_base.setIsRunning(false);\n\n        this.stop_promise = (async () => {\n            try {\n                if (interpreter) {\n                    await interpreter.stop();\n                }\n\n                // Only replace the interpreter that this stop operation actually stopped.\n                // This prevents a concurrent run/stop cycle from destroying a newer session.\n                if (this.interpreter === interpreter) {\n                    this.interpreter = null;\n                    this.interpreter = Interpreter();\n                    if (this.symbol) {\n                        try {\n                            await this.interpreter.bot.tradeEngine.watchTicks(this.symbol);\n                        } catch (error) {\n                            globalObserver.emit('Error', error);\n                        }\n                    }\n                }\n\n                forgetAccumulatorsProposalRequest(this);\n            } catch (error) {\n                globalObserver.emit('Error', error);\n            } finally {\n                this.stop_promise = null;\n            }\n        })();\n\n        return this.stop_promise;\n    }\n"""
+          if old not in s:
+              raise SystemExit('stopBot anchor not found')
+          s = s.replace(old, new, 1)
+
+          p.write_text(s)
+          PY
+
+      - name: Commit repair
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/external/bot-skeleton/scratch/dbot.js
+          git diff --cached --quiet && exit 0
+          git commit -m "Harden DBot stop and run error lifecycle"
+          git push
