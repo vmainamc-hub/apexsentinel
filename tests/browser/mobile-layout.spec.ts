@@ -83,6 +83,12 @@ test.describe('Apex Sentinel mobile/landscape UI regression', () => {
     });
 
     test('Run control is visible and tappable in portrait and landscape', async ({ page }) => {
+        await page.addInitScript(() => {
+            const settings = JSON.parse(localStorage.getItem('dbot_settings') || '{}');
+            settings.bot_builder_token = settings.bot_builder_token || 'browser-regression';
+            localStorage.setItem('dbot_settings', JSON.stringify(settings));
+        });
+
         for (const viewport of [
             { width: 390, height: 844 },
             { width: 844, height: 390 },
@@ -90,17 +96,13 @@ test.describe('Apex Sentinel mobile/landscape UI regression', () => {
             await page.setViewportSize(viewport);
             await page.goto('/#bot_builder', { waitUntil: 'domcontentloaded' });
             await page.locator('#id-bot-builder').waitFor({ state: 'visible', timeout: 15000 });
+            await page.waitForTimeout(1000);
 
-            // A first-run mobile session may show the DBot onboarding tour in a portal.
-            // Dismiss that transient overlay before testing the underlying Run control.
             const tour = page.locator('.tour-dialog').first();
             if (await tour.count() > 0 && await tour.isVisible().catch(() => false)) {
-                await page.keyboard.press('Escape');
-                await expect(tour).toBeHidden({ timeout: 3000 });
+                throw new Error('Mobile onboarding tour remained visible despite returning-user test state');
             }
 
-            // The app owns tab state in React/MobX; explicitly selecting the Bot Builder
-            // tab makes this regression independent of initial hash hydration timing.
             const runButton = page.locator('#db-animation__run-button');
             if (await runButton.count() === 0) {
                 await page.locator('#id-bot-builder').click();
