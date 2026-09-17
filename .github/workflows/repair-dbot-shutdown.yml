@@ -6,6 +6,7 @@ on:
       - 'src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js'
       - 'src/external/bot-skeleton/services/tradeEngine/trade/Ticks.js'
       - 'src/external/bot-skeleton/scratch/dbot.js'
+      - 'src/external/bot-skeleton/scratch/__tests__/dbot-lifecycle.runtime.spec.js'
       - '.github/workflows/repair-dbot-shutdown.yml'
 
 jobs:
@@ -16,6 +17,9 @@ jobs:
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+
+      - name: DBot lifecycle runtime regression
+        run: npx jest src/external/bot-skeleton/scratch/__tests__/dbot-lifecycle.runtime.spec.js --runInBand
 
       - name: Unit tests
         run: npm test -- --runInBand
