@@ -5,8 +5,6 @@ on:
     paths:
       - 'src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js'
       - 'src/external/bot-skeleton/services/tradeEngine/trade/Ticks.js'
-      - 'src/external/bot-skeleton/scratch/dbot.js'
-      - 'src/external/bot-skeleton/services/api/api-base.ts'
       - '.github/workflows/repair-dbot-shutdown.yml'
 
 jobs:
