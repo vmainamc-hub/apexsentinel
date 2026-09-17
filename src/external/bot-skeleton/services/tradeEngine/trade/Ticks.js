@@ -1,5 +1,5 @@
 /* eslint-disable no-promise-executor-return */
-// CI verification marker: shutdown repair is ready for tests.
+// CI verification marker: shutdown repair is ready for tests; runtime unchanged.
 import debounce from 'lodash.debounce';
 import { getLocalizedErrorMessage } from '@/constants/backend-error-messages';
 import { localize } from '@deriv-com/translations';
