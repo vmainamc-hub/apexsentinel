@@ -1,4 +1,5 @@
 /* eslint-disable no-promise-executor-return */
+// Shutdown repair verification trigger; no runtime behavior change.
 import debounce from 'lodash.debounce';
 import { getLocalizedErrorMessage } from '@/constants/backend-error-messages';
 import { localize } from '@deriv-com/translations';
@@ -24,8 +25,6 @@ export default Engine =>
                         key: tickListenerKey,
                     });
                 } catch (error) {
-                    // A previous monitor may already have been removed during bot shutdown.
-                    // Do not turn that normal cleanup race into a fatal UI error.
                     console.warn('[DBot] Previous tick monitor cleanup warning:', error);
                 }
 
@@ -41,8 +40,6 @@ export default Engine =>
                     const key = await ticksService.monitor({ symbol, callback });
                     tickListenerKey = key;
                 } catch (error) {
-                    // The bot can be stopped while a new monitor is being installed.
-                    // Do not route a shutdown race into the fatal UI error channel.
                     console.warn('[DBot] Tick monitor install warning:', error);
                 }
             }
