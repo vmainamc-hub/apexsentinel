@@ -24,7 +24,7 @@ type TDialog = {
     onCancel?: () => void;
     onClose?: () => void;
     onConfirm: () => void;
-    login: () => void;
+    login?: () => void;
     onEscapeButtonCancel?: () => void;
     portal_element_id?: string;
     title?: React.ReactNode;
@@ -78,7 +78,7 @@ const Dialog = ({
 
     const handleCancel = () => {
         if (cancel_button_text === localize('Log in')) {
-            login();
+            login?.();
         } else {
             if (is_closed_on_cancel && enableApp) {
                 enableApp();
@@ -104,7 +104,12 @@ const Dialog = ({
         }
     };
 
-    const validateClickOutside = () => !!dismissable || !!(has_close_icon && is_visible && is_closed_on_cancel);
+    // Do not let the click that opens a hidden dialog immediately close it again.
+    // The previous implementation treated every document click as an outside click
+    // even while the dialog was not visible, which can make reset confirmation appear
+    // to do nothing.
+    const validateClickOutside = () =>
+        !!is_visible && (!!dismissable || !!(has_close_icon && is_closed_on_cancel));
 
     useOnClickOutside(wrapper_ref, handleClose, validateClickOutside);
 
