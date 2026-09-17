@@ -103,7 +103,7 @@ test.describe('Apex Sentinel mobile/landscape UI regression', () => {
                 await expect(tour).toBeHidden({ timeout: 5000 });
             }
 
-            const runButton = page.locator('#db-animation__run-button');
+            const runButton = page.locator('#db-animation__run-button').first();
             if (await runButton.count() === 0) {
                 await page.locator('#id-bot-builder').click();
             }
