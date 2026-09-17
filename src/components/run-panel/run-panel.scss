@@ -17,7 +17,9 @@
             top: 0;
             left: 0;
             width: 100vw;
-            z-index: var(--zindex-drawer);
+            // Keep the mobile run controls in the same stacking context as the drawer,
+            // so the fixed controls (z-index: 10000) can sit above the drawer (z-index: 6).
+            z-index: 10001;
             height: calc(100% - env(safe-area-inset-bottom, 0));
             padding-bottom: env(safe-area-inset-bottom, 0);
 
