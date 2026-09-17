@@ -91,6 +91,14 @@ test.describe('Apex Sentinel mobile/landscape UI regression', () => {
             await page.goto('/#bot_builder', { waitUntil: 'domcontentloaded' });
             await page.locator('#id-bot-builder').waitFor({ state: 'visible', timeout: 15000 });
 
+            // A first-run mobile session may show the DBot onboarding tour in a portal.
+            // Dismiss that transient overlay before testing the underlying Run control.
+            const tour = page.locator('.tour-dialog').first();
+            if (await tour.count() > 0 && await tour.isVisible().catch(() => false)) {
+                await page.keyboard.press('Escape');
+                await expect(tour).toBeHidden({ timeout: 3000 });
+            }
+
             // The app owns tab state in React/MobX; explicitly selecting the Bot Builder
             // tab makes this regression independent of initial hash hydration timing.
             const runButton = page.locator('#db-animation__run-button');
