@@ -90,6 +90,7 @@
 }
 
 .bot-store__primary,
+.bot-store__sync,
 .bot-card__load {
     border: 0;
     border-radius: 8px;
@@ -98,6 +99,16 @@
     color: #fff;
     font-weight: 700;
     cursor: pointer;
+}
+
+.bot-store__sync {
+    background: var(--general-section-1, #eee);
+    color: inherit;
+}
+
+.bot-store__sync:disabled {
+    cursor: wait;
+    opacity: 0.6;
 }
 
 .bot-store__body {
@@ -136,13 +147,21 @@
     font-size: 16px;
 }
 
-.bot-card__symbol {
-    display: inline-block;
+.bot-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
     margin-top: 9px;
+}
+
+.bot-card__meta > span {
     padding: 3px 7px;
     border-radius: 5px;
     background: var(--general-section-1, #eee);
     font-size: 11px;
+}
+
+.bot-card__status {
     font-weight: 700;
 }
 
@@ -190,6 +209,11 @@
 }
 
 @media (max-width: 700px) {
+    .bot-store-trigger {
+        right: 12px;
+        bottom: 12px;
+    }
+
     .bot-store-overlay {
         padding: 0;
     }
@@ -199,6 +223,10 @@
         height: 100%;
         max-height: 100%;
         border-radius: 0;
+    }
+
+    .bot-store__toolbar {
+        flex-wrap: wrap;
     }
 
     .bot-card {
