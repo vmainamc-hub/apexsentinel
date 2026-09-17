@@ -26,10 +26,6 @@ import './app.scss';
 import 'react-toastify/dist/ReactToastify.css';
 import '../components/bot-notification/bot-notification.scss';
 
-// App Builder live-preview branding listener. Mounted only in the preview deployment
-// (NEXT_PUBLIC_APP_BUILD === 'true'); the inline check is constant-folded by rsbuild so
-// the import — and all of src/preview/ — is dead-code-eliminated from standalone partner
-// builds (where the BFF strips src/preview/ entirely).
 const PreviewBranding =
     process.env.NEXT_PUBLIC_APP_BUILD === 'true' ? lazy(() => import('../preview/preview-branding')) : null;
 
@@ -46,12 +42,8 @@ const AppContent = observer(() => {
     const msg_listener = React.useRef(null);
     const { connectionStatus } = useApiBase();
 
-    // Initialize dev mode keyboard shortcuts
     useDevMode();
 
-    // Warn (once) when the OAuth app id isn't configured, so a developer running
-    // locally understands why Log in / Sign up are disabled. Skipped inside the
-    // App Builder static preview, which intentionally runs without env vars.
     useEffect(() => {
         if (isPreviewMode()) return;
         if (!process.env.NEXT_PUBLIC_DERIV_APP_ID) {
@@ -71,10 +63,6 @@ const AppContent = observer(() => {
     };
 
     useLiveChat(livechat_client_information);
-
-    // NOTE: Disabled Intercom until further notice
-    // const token = V2GetActiveToken() ?? null;
-    // useIntercom(token);
 
     useEffect(() => {
         if (connectionStatus === CONNECTION_STATUS.OPENED) {
@@ -112,9 +100,6 @@ const AppContent = observer(() => {
     }, []);
 
     React.useEffect(() => {
-        // Check if api is initialized and then subscribe to the api messages
-        // Also we should only subscribe to the messages once user is logged in
-        // And is not already subscribed to the messages
         if (!is_subscribed_to_msg_listener.current && client.is_logged_in && is_api_initialized && api_base?.api) {
             is_subscribed_to_msg_listener.current = true;
             msg_listener.current = api_base.api.onMessage()?.subscribe(handleMessage);
@@ -139,19 +124,22 @@ const AppContent = observer(() => {
     const changeActiveSymbolLoadingState = () => {
         init();
 
-        const retrieveActiveSymbols = () => {
+        const retrieveActiveSymbols = async () => {
             const { active_symbols } = ApiHelpers.instance;
-
-            active_symbols.retrieveActiveSymbols(true).then(() => {
+            try {
+                await active_symbols.retrieveActiveSymbols(true);
+            } catch (error) {
+                // Symbol discovery must never take down the authenticated React tree.
+                // Individual symbol selectors already have safe fallbacks when the API is unavailable.
+                console.error('[ActiveSymbols] initialization failed:', error);
+            } finally {
                 setIsLoading(false);
-            });
+            }
         };
 
         if (ApiHelpers?.instance?.active_symbols) {
             retrieveActiveSymbols();
         } else {
-            // This is a workaround to fix the issue where the active symbols are not loaded immediately
-            // when the API is initialized. Should be replaced with RxJS pubsub
             const intervalId = setInterval(() => {
                 if (ApiHelpers?.instance?.active_symbols) {
                     clearInterval(intervalId);
