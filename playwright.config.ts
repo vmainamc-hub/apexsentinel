@@ -1,4 +1,4 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
     testDir: './tests/browser',
@@ -16,9 +16,4 @@ export default defineConfig({
         reuseExistingServer: false,
         timeout: 120_000,
     },
-    projects: [
-        { name: 'mobile-portrait', use: { ...devices['Pixel 5'] } },
-        { name: 'mobile-landscape', use: { ...devices['Pixel 5'], viewport: { width: 800, height: 360 } } },
-        { name: 'tablet-landscape', use: { ...devices['iPad Mini'], viewport: { width: 844, height: 390 } } },
-    ],
 });
