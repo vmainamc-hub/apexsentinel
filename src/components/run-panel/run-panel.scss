@@ -83,21 +83,11 @@
         &-amount {
             @include typeface(--small-center-normal-black, none);
 
-            &--positive {
-                font-weight: bold;
-                color: var(--text-profit-success);
-            }
-
-            &--negative {
-                font-weight: bold;
-                color: var(--text-loss-danger);
-            }
+            &--positive { font-weight: bold; color: var(--text-profit-success); }
+            &--negative { font-weight: bold; color: var(--text-loss-danger); }
         }
 
-        &--mobile {
-            width: 100%;
-            bottom: 0;
-        }
+        &--mobile { width: 100%; bottom: 0; }
     }
 
     &__footer {
@@ -129,9 +119,7 @@
                 scrollbar-width: none;
                 -ms-overflow-style: none;
 
-                &::-webkit-scrollbar {
-                    display: none;
-                }
+                &::-webkit-scrollbar { display: none; }
             }
 
             &__item {
@@ -157,9 +145,7 @@
             height: calc(100vh - 42rem);
             overflow: hidden;
 
-            &--no-stat {
-                height: var(--drawer-content-height-no-stat);
-            }
+            &--no-stat { height: var(--drawer-content-height-no-stat); }
 
             &--mobile {
                 display: flex;
@@ -173,9 +159,7 @@
                 overflow: hidden;
             }
 
-            &--summary-tab {
-                padding: 0.8rem 1.6rem;
-            }
+            &--summary-tab { padding: 0.8rem 1.6rem; }
         }
     }
 
@@ -196,11 +180,15 @@
         @include flex-center(space-between);
         flex-direction: column;
         position: fixed;
+        left: 0;
+        right: 0;
         bottom: 0;
         width: 100%;
+        box-sizing: border-box;
         background-color: var(--general-main-1);
         border-top: solid 2px var(--general-section-1);
-        z-index: 1000;
+        z-index: 10000;
+        pointer-events: auto;
 
         @supports (-webkit-touch-callout: none) {
             bottom: env(safe-area-inset-bottom, 0);
@@ -244,13 +232,19 @@
         width: 100%;
         min-width: 0;
         flex: 1 1 auto;
+        position: relative;
+        z-index: 1;
     }
 
     .animation__run-button,
     .animation__stop-button {
+        position: relative;
+        z-index: 2;
         flex: 0 0 auto;
         min-width: 8rem;
+        min-height: 4rem;
         white-space: nowrap;
+        touch-action: manipulation;
     }
 
     .animation__container {
@@ -269,9 +263,7 @@
             &-active {
                 height: auto;
                 transform: translateX(0%);
-                transition:
-                    transform 0.3s ease-in-out,
-                    height 0.3s ease-in-out;
+                transition: transform 0.3s ease-in-out, height 0.3s ease-in-out;
             }
         }
     }
@@ -280,9 +272,7 @@
 @media (orientation: landscape) and (max-width: 1024px) {
     .run-panel {
         &__content {
-            .dc-tabs__list {
-                justify-content: flex-start;
-            }
+            .dc-tabs__list { justify-content: flex-start; }
         }
     }
 
@@ -291,7 +281,5 @@
         height: 5.6rem;
     }
 
-    .controls__section {
-        min-height: 5.6rem;
-    }
+    .controls__section { min-height: 5.6rem; }
 }
