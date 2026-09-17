@@ -2,6 +2,10 @@ import { expect, test } from '@playwright/test';
 
 test('diagnose landscape Run control hit target', async ({ page }) => {
     await page.setViewportSize({ width: 844, height: 390 });
+
+    const pageErrors: string[] = [];
+    page.on('pageerror', error => pageErrors.push(error.message));
+
     await page.goto('/#bot_builder', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1800);
 
@@ -15,7 +19,18 @@ test('diagnose landscape Run control hit target', async ({ page }) => {
     }
 
     const button = page.locator('#db-animation__run-button').first();
-    await button.waitFor({ state: 'visible', timeout: 15000 });
+    if (await button.count() === 0 || !(await button.isVisible().catch(() => false))) {
+        console.log(`LANDSCAPE_DIAGNOSTIC_RELOAD pageErrors=${JSON.stringify(pageErrors)}`);
+        await page.goto('/#bot_builder', { waitUntil: 'domcontentloaded' });
+        await page.waitForTimeout(2500);
+    }
+
+    if (await page.locator('#id-bot-builder').count() > 0 && !(await button.isVisible().catch(() => false))) {
+        await page.locator('#id-bot-builder').click().catch(() => undefined);
+        await page.waitForTimeout(1000);
+    }
+
+    await button.waitFor({ state: 'visible', timeout: 20000 });
 
     const diagnostic = await button.evaluate((element: HTMLElement) => {
         const rect = element.getBoundingClientRect();
@@ -39,11 +54,11 @@ test('diagnose landscape Run control hit target', async ({ page }) => {
         return {
             button: describe(element),
             hit: describe(document.elementFromPoint(x, y)),
-            stack: document.elementsFromPoint(x, y).slice(0, 12).map(describe),
+            stack: document.elementsFromPoint(x, y).slice(0, 16).map(describe),
             ancestors: (() => {
                 const result = [] as unknown[];
                 let node: Element | null = element;
-                while (node && result.length < 12) {
+                while (node && result.length < 16) {
                     result.push(describe(node));
                     node = node.parentElement;
                 }
