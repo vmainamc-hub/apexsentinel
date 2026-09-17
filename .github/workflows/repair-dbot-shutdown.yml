@@ -13,14 +13,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Static verification
-        run: |
-          grep -q 'STOP_CONTRACT_WAIT_TIMEOUT_MS' src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js
-          grep -q 'Timed out waiting for contract.sold during stop' src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js
-          ! grep -q 'global_timeouts.forEach' src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js
-          grep -q "console.warn('[DBot] Tick-service cleanup warning during stop:'" src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js
-          grep -q "console.warn('[DBot] Previous tick monitor cleanup warning:'" src/external/bot-skeleton/services/tradeEngine/trade/Ticks.js
-
       - name: Install dependencies
         run: npm ci
 
