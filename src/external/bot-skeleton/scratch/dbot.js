@@ -44,7 +44,7 @@ class DBot {
             if (type === window.Blockly.Events.BLOCK_CHANGE) {
                 const is_symbol_list_change = name === 'SYMBOL_LIST';
                 const is_trade_type_cat_list_change = name === 'TRADETYPECAT_LIST';
-                
+
                 if (is_symbol_list_change || is_trade_type_cat_list_change) {
                     const { contracts_for } = ApiHelpers?.instance ?? {};
                     const top_parent_block = this.getTopParent();
@@ -176,7 +176,7 @@ class DBot {
 
                 window.Blockly.derivWorkspace.strategy_to_load = main_xml;
                 window.Blockly.getMainWorkspace().strategy_to_load = main_xml;
-                window.Blockly.derivWorkspace.current_strategy_id = window.Blockly.utils.idGenerator.genUid();
+                window.Blockly.getMainWorkspace().RTL = isDbotRTL();
 
                 let file_name = config().default_file_name;
                 if (recent_files && recent_files.length) {
@@ -250,7 +250,7 @@ class DBot {
     /**
      * Allows you to add a function that needs to be executed before running the bot. Each
      * function needs to return true in order for the bot to run.
-     * @param {Function} func to execute which returns true/false.
+     * @param {Function} func Function to execute which returns true/false.
      */
     addBeforeRunFunction(func) {
         this.before_run_funcs.push(func);
@@ -271,12 +271,12 @@ class DBot {
      * JavaScript code that's fed to the interpreter.
      */
     runBot() {
-        const was_stopping = api_base.is_stopping;
+        if (api_base.is_stopping) return;
 
         try {
             api_base.is_stopping = false;
             const code = this.generateCode();
-            if (was_stopping || !this.interpreter.bot.tradeEngine.checkTicksPromiseExists()) this.interpreter = Interpreter();
+            if (!this.interpreter.bot.tradeEngine.checkTicksPromiseExists()) this.interpreter = Interpreter();
 
             this.is_bot_running = true;
 
@@ -450,6 +450,7 @@ class DBot {
                 this.disableBlocksRecursively(block);
             }
         });
+        return true;
     }
 
     /**
@@ -518,7 +519,7 @@ class DBot {
 
     /**
      * Checks all blocks in the workspace to see if they need to be highlighted
-     * in case one of its inputs is not populated, returns an empty value, or doesn't
+     * in case one of their inputs is not populated, returns an empty value, or doesn't
      * pass the custom validator.
      * Note: The value passed to the custom validator is always a string value
      * @param {window.Blockly.Event} event Workspace event
@@ -617,36 +618,86 @@ class DBot {
                         // Detected a non-existent required input
                     } else if (input && input?.connection) {
                         const order = window.Blockly.JavaScript.javascriptGenerator.ORDER_ATOMIC;
-                        const input_code = window.Blockly.JavaScript.javascriptGenerator.valueToCode(
+                        const value = window.Blockly.JavaScript.javascriptGenerator.valueToCode(
                             block,
                             input_name,
                             order
                         );
+                        const inputValidatorFn = required_inputs_object[input_name];
 
-                        const is_input_empty = !input_code || input_code.trim() === '';
-                        const is_custom_validator_failed =
-                            block.customValidator &&
-                            block.customValidator(input_code, input_code) === false;
+                        // If a custom validator was supplied, use this to determine whether
+                        // the block should be highlighted.
+                        if (typeof inputValidatorFn === 'function') {
+                            return !!inputValidatorFn(value);
+                        }
 
-                        return is_input_empty || is_custom_validator_failed;
+                        // If there's no custom validator, only check if input was populated and
+                        // doesn't return an empty value.
+                        return !value;
                     }
 
-                    return false;
+                    return true;
                 });
 
-                block.setErrorHighlighted(should_highlight);
+                if (should_highlight) {
+                    // Remove select highlight in favour of error highlight.
+                    block.removeSelect();
+                }
+
+                block.setErrorHighlighted(should_highlight, block.error_message || undefined);
+
+                // Automatically expand blocks that have been highlighted.
+                if (force_check && (block.is_error_highlighted || block.hasErrorHighlightedDescendant())) {
+                    let current_collapsed_block = block;
+                    while (current_collapsed_block) {
+                        current_collapsed_block.setCollapsed(false);
+                        current_collapsed_block = current_collapsed_block.getParent();
+                    }
+                }
             }
         });
     }
+
+    /**
+     * Checks whether the workspace contains non-silent notification blocks. Returns array of names for audio files to be played.
+     */
+    getStrategySounds() {
+        const all_blocks = this.workspace.getAllBlocks();
+        const notify_blocks = all_blocks.filter(block => block.type === 'notify');
+        const strategy_sounds = [];
+
+        notify_blocks.forEach(block => {
+            const selected_sound = block.inputList[0].fieldRow[3].value_;
+
+            if (selected_sound !== 'silent') {
+                strategy_sounds.push(selected_sound);
+            }
+        });
+
+        return strategy_sounds;
+    }
+
+    static handleDragOver(event) {
+        event.stopPropagation();
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy'; // eslint-disable-line no-param-reassign
+    }
+
+    static handleDropOver(event, handleFileChange) {
+        const main_workspace_dom = document.getElementById('scratch_div');
+        const local_drag_zone = document.getElementById('load-strategy__local-dropzone-area');
+
+        if (main_workspace_dom.contains(event.target)) {
+            handleFileChange(event);
+        } else if (local_drag_zone && local_drag_zone.contains(event.target)) {
+            handleFileChange(event, false);
+        } else {
+            event.stopPropagation();
+            event.preventDefault();
+            event.dataTransfer.effectAllowed = 'none';
+            event.dataTransfer.dropEffect = 'none';
+        }
+    }
 }
 
-DBot.handleDragOver = e => {
-    e.preventDefault();
-};
-
-DBot.handleDropOver = (e, handleFileChange) => {
-    e.preventDefault();
-    handleFileChange(e.dataTransfer.files);
-};
-
-export default DBot;
+export default new DBot();
