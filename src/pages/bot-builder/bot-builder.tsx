@@ -4,6 +4,7 @@ import classNames from 'classnames';
 import { observer } from 'mobx-react-lite';
 import { botNotification } from '@/components/bot-notification/bot-notification';
 import { notification_message } from '@/components/bot-notification/bot-notification-utils';
+import BotStore from '@/components/bot-store/bot-store';
 import { useStore } from '@/hooks/useStore';
 import { localize } from '@deriv-com/translations';
 import { useDevice } from '@deriv-com/ui';
@@ -26,9 +27,6 @@ const BotBuilder = observer(() => {
     const { onMount, onUnmount } = app;
     const el_ref = React.useRef<HTMLInputElement | null>(null);
 
-    // TODO: fix
-    // const isMounted = useIsMounted();
-    // const { data: remote_config_data } = useRemoteConfig(isMounted());
     let deleted_block_id: null | string = null;
 
     React.useEffect(() => {
@@ -67,6 +65,7 @@ const BotBuilder = observer(() => {
         is_blockly_listener_registered.current = false;
         window.Blockly?.derivWorkspace?.removeChangeListener(handleBlockChangeOnBotRun);
     };
+
     React.useEffect(() => {
         const workspace = window.Blockly?.derivWorkspace;
         if (workspace && !is_blockly_delete_listener_registered.current) {
@@ -123,8 +122,8 @@ const BotBuilder = observer(() => {
                     <WorkspaceWrapper />
                 </div>
             </div>
+            <BotStore />
             {active_tab === 1 && <BotBuilderTourHandler is_mobile={!isDesktop} />}
-            {/* removed this outside from toolbar becuase it needs to loaded seperately without dependency */}
             <LoadModal />
             <SaveModal />
             {is_open && <QuickStrategy1 />}
