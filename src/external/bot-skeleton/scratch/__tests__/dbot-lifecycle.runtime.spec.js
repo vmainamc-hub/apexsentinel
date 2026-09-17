@@ -1,17 +1,17 @@
 jest.mock('../../constants', () => ({ save_types: { UNSAVED: 'UNSAVED' } }));
 jest.mock('../../constants/config', () => ({ config: () => ({ default_file_name: 'test' }) }));
 
-const api_base = {
+const mockApiBase = {
     is_stopping: false,
     setIsRunning: jest.fn(),
 };
-jest.mock('../../services/api/api-base', () => ({ api_base }));
+jest.mock('../../services/api/api-base', () => ({ api_base: mockApiBase }));
 jest.mock('../../services/api/api-helpers', () => ({
     setInstance: jest.fn(),
     instance: {},
 }));
 
-const createdInterpreters = [];
+const mockCreatedInterpreters = [];
 jest.mock('../../services/tradeEngine/utils/interpreter', () => ({
     __esModule: true,
     default: jest.fn(() => {
@@ -22,7 +22,7 @@ jest.mock('../../services/tradeEngine/utils/interpreter', () => ({
         const interpreter = {
             run: jest.fn(() => Promise.resolve()),
             stop: jest.fn(() => {
-                api_base.is_stopping = true;
+                mockApiBase.is_stopping = true;
                 return stopPromise;
             }),
             bot: {
@@ -33,7 +33,7 @@ jest.mock('../../services/tradeEngine/utils/interpreter', () => ({
             },
             __resolveStop: resolveStop,
         };
-        createdInterpreters.push(interpreter);
+        mockCreatedInterpreters.push(interpreter);
         return interpreter;
     }),
 }));
@@ -62,9 +62,9 @@ const DBot = require('../dbot').default;
 
 describe('DBot runtime lifecycle: Run → Stop → Run → Stop', () => {
     beforeEach(() => {
-        api_base.is_stopping = false;
-        api_base.setIsRunning.mockClear();
-        createdInterpreters.length = 0;
+        mockApiBase.is_stopping = false;
+        mockApiBase.setIsRunning.mockClear();
+        mockCreatedInterpreters.length = 0;
         Interpreter.mockClear();
     });
 
@@ -73,41 +73,35 @@ describe('DBot runtime lifecycle: Run → Stop → Run → Stop', () => {
         dbot.generateCode = jest.fn(() => 'runtime-test-code');
         dbot.interpreter = Interpreter();
 
-        // Run #1 uses the existing healthy interpreter.
         dbot.runBot();
         const firstInterpreter = dbot.interpreter;
         expect(firstInterpreter.run).toHaveBeenCalledWith('runtime-test-code');
         expect(dbot.is_bot_running).toBe(true);
 
-        // Stop #1 begins but remains in-flight, exactly where the race used to occur.
         const firstStop = dbot.stopBot();
         const repeatedFirstStop = dbot.stopBot();
         expect(repeatedFirstStop).toBe(firstStop);
         expect(firstInterpreter.stop).toHaveBeenCalledTimes(1);
-        expect(api_base.is_stopping).toBe(true);
+        expect(mockApiBase.is_stopping).toBe(true);
 
-        // Run #2 arrives while Stop #1 is still shutting down.
         dbot.runBot();
         const secondInterpreter = dbot.interpreter;
         expect(secondInterpreter).not.toBe(firstInterpreter);
         expect(secondInterpreter.run).toHaveBeenCalledWith('runtime-test-code');
         expect(dbot.is_bot_running).toBe(true);
-        expect(api_base.is_stopping).toBe(false);
+        expect(mockApiBase.is_stopping).toBe(false);
 
-        // Completion of the old Stop must not replace or terminate Run #2.
         firstInterpreter.__resolveStop();
         await firstStop;
         expect(dbot.interpreter).toBe(secondInterpreter);
         expect(secondInterpreter.stop).not.toHaveBeenCalled();
         expect(dbot.is_bot_running).toBe(true);
 
-        // Stop #2 completes normally.
         const secondStop = dbot.stopBot();
         expect(secondInterpreter.stop).toHaveBeenCalledTimes(1);
         secondInterpreter.__resolveStop();
         await secondStop;
 
-        // A fresh idle interpreter is left ready for the next run.
         expect(dbot.interpreter).not.toBe(secondInterpreter);
         expect(dbot.stop_promise).toBeNull();
     });
