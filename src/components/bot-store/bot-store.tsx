@@ -2,9 +2,10 @@ import React from 'react';
 import {
     deleteStoredBot,
     listStoredBots,
-    loadXmlIntoDBot,
+    loadBot,
     openDTrader,
     saveStoredBot,
+    validateBotXml,
     type StoredBot,
 } from '@/services/bot-store.service';
 import './bot-store.scss';
@@ -40,7 +41,21 @@ const BotStore = () => {
 
         try {
             const xml = await file.text();
-            if (!xml.trim()) throw new Error('The XML file is empty.');
+            const validation = validateBotXml(xml);
+            if (!validation.valid) {
+                throw new Error(`Rejected ${file.name}: ${validation.errors[0]}`);
+            }
+
+            const parsed = typeof DOMParser !== 'undefined'
+                ? new DOMParser().parseFromString(xml, 'application/xml')
+                : null;
+            const symbol = parsed
+                ? Array.from(parsed.querySelectorAll('*')).map(node =>
+                      ['symbol', 'underlying', 'market']
+                          .map(attribute => node.getAttribute(attribute)?.trim())
+                          .find(value => value && /^[A-Za-z0-9_./-]{2,32}$/.test(value))
+                  ).find(Boolean)
+                : undefined;
 
             const name = file.name.replace(/\.xml$/i, '').trim() || 'Untitled Bot';
             const now = Date.now();
@@ -49,24 +64,39 @@ const BotStore = () => {
                 name,
                 description: 'Imported DBot strategy',
                 xml,
+                symbol,
+                version: 'DBot XML',
                 createdAt: now,
                 updatedAt: now,
+                validation,
             });
             await refresh();
-            setMessage(`${name} added to your Bot Store.`);
+            setMessage(`${name} added. ${validation.blockCount} blocks and ${validation.purchaseBlockCount} Purchase block${validation.purchaseBlockCount === 1 ? '' : 's'} validated.`);
         } catch (error) {
             setMessage(error instanceof Error ? error.message : 'Unable to import this bot.');
         }
     };
 
-    const loadBot = async (bot: StoredBot) => {
+    const loadBotFromStore = async (bot: StoredBot) => {
         setBusyId(bot.id);
         setMessage('');
+
+        // Open synchronously from the user click so popup blockers are less likely to
+        // prevent DTrader from opening while the DBot XML is being validated/loaded.
+        const dtraderWindow = window.open('about:blank', '_blank');
+
         try {
-            await loadXmlIntoDBot(bot);
+            const validation = await loadBot(bot, dtraderWindow);
             setSelectedId(bot.id);
-            setMessage(`${bot.name} loaded into DBot.`);
+            setMessage(`${bot.name} loaded into DBot${bot.symbol ? ` and DTrader (${bot.symbol})` : ' successfully. DTrader symbol is not configured for this bot.'}`);
+            if (!bot.symbol && dtraderWindow && !dtraderWindow.closed) {
+                dtraderWindow.close();
+            }
+            if (validation.warnings.length > 0) {
+                setMessage(`${bot.name} loaded into DBot. ${validation.warnings[0]}`);
+            }
         } catch (error) {
+            if (dtraderWindow && !dtraderWindow.closed) dtraderWindow.close();
             setMessage(error instanceof Error ? error.message : 'Unable to load this bot into DBot.');
         } finally {
             setBusyId(null);
@@ -75,9 +105,14 @@ const BotStore = () => {
 
     const removeBot = async (bot: StoredBot) => {
         if (!window.confirm(`Remove "${bot.name}" from your Bot Store?`)) return;
-        await deleteStoredBot(bot.id);
-        if (selectedId === bot.id) setSelectedId(null);
-        await refresh();
+        try {
+            await deleteStoredBot(bot.id);
+            if (selectedId === bot.id) setSelectedId(null);
+            await refresh();
+            setMessage(`${bot.name} removed from your Bot Store.`);
+        } catch (error) {
+            setMessage(error instanceof Error ? error.message : 'Unable to remove this bot.');
+        }
     };
 
     return (
@@ -94,7 +129,7 @@ const BotStore = () => {
                             <div>
                                 <div className='bot-store__eyebrow'>APEX SENTINEL</div>
                                 <h2 id='bot-store-title'>Bot Store</h2>
-                                <p>Your personal library of DBot XML strategies.</p>
+                                <p>Your personal library of validated DBot XML strategies.</p>
                             </div>
                             <button type='button' className='bot-store__close' onClick={() => setIsOpen(false)} aria-label='Close'>×</button>
                         </header>
@@ -107,13 +142,13 @@ const BotStore = () => {
                             <span>{bots.length} bot{bots.length === 1 ? '' : 's'} stored</span>
                         </div>
 
-                        {message && <div className='bot-store__message'>{message}</div>}
+                        {message && <div className='bot-store__message' role='status'>{message}</div>}
 
                         <div className='bot-store__body'>
                             {bots.length === 0 ? (
                                 <div className='bot-store__empty'>
                                     <strong>Your Bot Store is empty.</strong>
-                                    <p>Click <b>+ Add DBot XML</b> to put your existing bots here. They remain available in this browser.</p>
+                                    <p>Click <b>+ Add DBot XML</b> to import an existing DBot strategy. Invalid XML and strategies without a Purchase block are rejected before storage.</p>
                                 </div>
                             ) : (
                                 bots.map(bot => (
@@ -121,13 +156,17 @@ const BotStore = () => {
                                         <div className='bot-card__main'>
                                             <h3>{bot.name}</h3>
                                             <p>{bot.description}</p>
-                                            {bot.symbol && <span className='bot-card__symbol'>{bot.symbol}</span>}
+                                            <div className='bot-card__meta'>
+                                                <span className='bot-card__status'>✓ DBot XML validated</span>
+                                                {bot.symbol && <span className='bot-card__symbol'>{bot.symbol}</span>}
+                                                {bot.validation && <span>{bot.validation.blockCount} blocks</span>}
+                                            </div>
                                         </div>
                                         <div className='bot-card__actions'>
-                                            <button type='button' className='bot-card__load' disabled={busyId === bot.id} onClick={() => loadBot(bot)}>
-                                                {busyId === bot.id ? 'Loading…' : 'Load to DBot'}
+                                            <button type='button' className='bot-card__load' disabled={busyId === bot.id} onClick={() => loadBotFromStore(bot)}>
+                                                {busyId === bot.id ? 'Loading…' : 'Load'}
                                             </button>
-                                            <button type='button' onClick={() => openDTrader(bot.symbol)}>Open DTrader</button>
+                                            <button type='button' onClick={() => openDTrader(bot.symbol)}>DTrader</button>
                                             <button type='button' className='bot-card__delete' onClick={() => removeBot(bot)}>Remove</button>
                                         </div>
                                     </article>
@@ -136,8 +175,8 @@ const BotStore = () => {
                         </div>
 
                         <footer className='bot-store__footer'>
-                            <span><b>Load to DBot</b> imports the exact XML into the live Blockly workspace.</span>
-                            <span><b>Open DTrader</b> opens the matching Deriv trading interface; DTrader does not accept DBot XML.</span>
+                            <span><b>Load</b> validates the stored XML, waits for the live DBot Blockly workspace, imports the exact strategy, then opens DTrader for the configured symbol.</span>
+                            <span><b>Important:</b> DTrader is a separate interface and does not import DBot XML.</span>
                         </footer>
                     </section>
                 </div>
