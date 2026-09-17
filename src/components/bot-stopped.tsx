@@ -4,7 +4,6 @@ import Text from '@/components/shared_ui/text';
 import { useStore } from '@/hooks/useStore';
 import { navigateToUrl, reloadPage } from '@/utils/navigation-utils';
 import { generateUrlWithRedirect } from '@/utils/url-redirect-utils';
-import { LegacyClose1pxIcon } from '@deriv/quill-icons/Legacy';
 import { Localize, localize } from '@deriv-com/translations';
 import Dialog from './shared_ui/dialog';
 import { standalone_routes } from './shared';
@@ -34,13 +33,18 @@ const BotStopped = observer(() => {
                     data-testid='data-close-button'
                     onClick={onClickClose}
                     onKeyDown={(e: React.KeyboardEvent) => {
-                        if (e.key === 'Enter') {
+                        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+                            e.preventDefault();
                             onClickClose();
                         }
                     }}
+                    role='button'
+                    aria-label={localize('Close')}
                     tabIndex={0}
                 >
-                    <LegacyClose1pxIcon height='20px' width='20px' fill='var(--text-general)' />
+                    <span aria-hidden='true' style={{ fontSize: '20px', lineHeight: 1 }}>
+                        ×
+                    </span>
                 </div>
             </div>
             <Text as='p' align='left' size='xs' color='prominent'>
