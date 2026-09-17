@@ -8,8 +8,6 @@ import { useStore } from '@/hooks/useStore';
 import { StandaloneBullhornRegularIcon } from '@deriv/quill-icons';
 import { localize } from '@deriv-com/translations';
 import { Notifications as Announcement } from '@deriv-com/ui';
-/* [AI] - Analytics event tracking removed - see migrate-docs/MONITORING_PACKAGES.md for re-implementation guide */
-/* [/AI] */
 import { guide_content } from '../../tutorials/constants';
 import { performButtonAction } from './utils/accumulator-helper-functions';
 import { MessageAnnounce, TitleAnnounce } from './announcement-components';
@@ -21,6 +19,34 @@ type TAnnouncements = {
     is_mobile?: boolean;
     is_tablet?: boolean;
     handleTabChange: (item: number) => void;
+};
+
+// The notifications package has changed its export surface across Deriv UI releases.
+// Keep the dashboard usable if the optional notification panel is unavailable at runtime.
+const SafeAnnouncement = ({
+    isOpen,
+    setIsOpen,
+    notifications,
+    clearNotificationsCallback,
+    className,
+    componentConfig,
+    excludedClickOutsideClass,
+    appElement,
+}: any) => {
+    if (typeof Announcement !== 'function') return null;
+
+    return (
+        <Announcement
+            className={className}
+            clearNotificationsCallback={clearNotificationsCallback}
+            componentConfig={componentConfig}
+            isOpen={isOpen}
+            setIsOpen={setIsOpen}
+            notifications={notifications}
+            excludedClickOutsideClass={excludedClickOutsideClass}
+            {...(appElement ? { appElement } : {})}
+        />
+    );
 };
 
 const Announcements = observer(({ is_mobile, is_tablet, handleTabChange }: TAnnouncements) => {
@@ -54,16 +80,11 @@ const Announcements = observer(({ is_mobile, is_tablet, handleTabChange }: TAnno
     const modalButtonAction = (announce_id: string, announcement: TAnnouncement) => () => {
         setSelectedAnnouncement(announcement);
         setIsAnnounceDialogOpen(true);
-        setIsOpenAnnounceList(prev => !prev);
-        /* [AI] - Analytics event tracking removed - see migrate-docs/MONITORING_PACKAGES.md for re-implementation guide */
-        /* [/AI] */
         updateLocalStorage(announce_id);
     };
 
     const handleRedirect = (url: string) => () => {
-        if (navigate) {
-            navigate(url);
-        }
+        if (navigate) navigate(url);
     };
 
     const updateNotifications = () => {
@@ -72,21 +93,30 @@ const Announcements = observer(({ is_mobile, is_tablet, handleTabChange }: TAnno
         const tmp_notifications: TNotifications[] = [];
         const temp_localstorage_data: Record<string, boolean> | null = {};
         const loggedInAccountId = localStorage.getItem('active_loginid');
-        let allUserAccounts = localStorage.getItem('client_account_details');
-        let accountDate = null;
-        if (allUserAccounts) {
-            allUserAccounts = JSON.parse(allUserAccounts);
-            const currentAccount = allUserAccounts?.find(account => account.loginid == loggedInAccountId);
-            accountDate = new Date(currentAccount.created_at * 1000);
+        const storedAccounts = localStorage.getItem('client_account_details');
+        let accountDate: Date | null = null;
+
+        if (storedAccounts) {
+            try {
+                const allUserAccounts = JSON.parse(storedAccounts);
+                const currentAccount = Array.isArray(allUserAccounts)
+                    ? allUserAccounts.find(account => account?.loginid === loggedInAccountId)
+                    : null;
+                if (currentAccount?.created_at) {
+                    accountDate = new Date(currentAccount.created_at * 1000);
+                }
+            } catch (error) {
+                console.warn('[Announcements] invalid stored account data:', error);
+            }
         }
 
-        BOT_ANNOUNCEMENTS_LIST.map(item => {
+        BOT_ANNOUNCEMENTS_LIST.forEach(item => {
             let is_not_read = true;
             if (data && Object.prototype.hasOwnProperty.call(data, item.id)) {
                 is_not_read = data[item.id];
             }
             const notificationDate = new Date(item.date);
-            if (accountDate && notificationDate > accountDate) {
+            if (accountDate && notificationDate > accountDate && typeof item.icon === 'function') {
                 tmp_notifications.push({
                     id: item.id,
                     icon: <item.icon announce={is_not_read} />,
@@ -117,36 +147,22 @@ const Announcements = observer(({ is_mobile, is_tablet, handleTabChange }: TAnno
 
     const openAccumulatorsVideo = () => {
         const accumulators_video = guide_content().find(guide_content => guide_content.id === 4);
-        if (accumulators_video) {
-            showVideoDialog({ url: accumulators_video.url, type: 'url' });
-        }
+        if (accumulators_video) showVideoDialog({ url: accumulators_video.url, type: 'url' });
     };
 
     const handleOnCancel = () => {
-        /* [AI] - Analytics event tracking removed - see migrate-docs/MONITORING_PACKAGES.md for re-implementation guide */
-        /* [/AI] */
         if (selected_announcement?.switch_tab_on_cancel) {
             handleTabChange(selected_announcement.switch_tab_on_cancel);
-            if (selected_announcement.announcement.id === 'ACCUMULATOR_ANNOUNCE') {
-                openAccumulatorsVideo();
-            }
+            if (selected_announcement.announcement.id === 'ACCUMULATOR_ANNOUNCE') openAccumulatorsVideo();
         }
         selected_announcement?.onCancel?.();
         setSelectedAnnouncement(null);
     };
 
     const handleOnConfirm = () => {
-        /* [AI] - Analytics event tracking removed - see migrate-docs/MONITORING_PACKAGES.md for re-implementation guide */
-        /* [/AI] */
-        if (selected_announcement?.switch_tab_on_confirm) {
-            handleTabChange(selected_announcement.switch_tab_on_confirm);
-        }
-        if (selected_announcement?.should_toggle_qs_modal) {
-            setFormVisibility(true);
-        }
-        if (selected_announcement?.should_toggle_load_modal) {
-            toggleLoadModal();
-        }
+        if (selected_announcement?.switch_tab_on_confirm) handleTabChange(selected_announcement.switch_tab_on_confirm);
+        if (selected_announcement?.should_toggle_qs_modal) setFormVisibility(true);
+        if (selected_announcement?.should_toggle_load_modal) toggleLoadModal();
         selected_announcement?.onConfirm?.();
         setSelectedAnnouncement(null);
     };
@@ -164,11 +180,7 @@ const Announcements = observer(({ is_mobile, is_tablet, handleTabChange }: TAnno
         <div className='announcements'>
             <button
                 className='announcements__button'
-                onClick={() => {
-                    setIsOpenAnnounceList(prevState => !prevState);
-                    /* [AI] - Analytics event tracking removed - see migrate-docs/MONITORING_PACKAGES.md for re-implementation guide */
-                    /* [/AI] */
-                }}
+                onClick={() => setIsOpenAnnounceList(prevState => !prevState)}
                 data-testid='btn-announcements'
             >
                 <StandaloneBullhornRegularIcon fill='var(--icon-black-plus)' iconSize='sm' />
@@ -184,7 +196,7 @@ const Announcements = observer(({ is_mobile, is_tablet, handleTabChange }: TAnno
                 )}
             </button>
             <div className='notifications__wrapper'>
-                <Announcement
+                <SafeAnnouncement
                     className={classNames('', {
                         'notifications__wrapper--mobile': is_mobile,
                         'notifications__wrapper--desktop': !is_mobile,
