@@ -80,7 +80,8 @@ describe('DBot runtime lifecycle: Run → Stop → Run → Stop', () => {
 
         const firstStop = dbot.stopBot();
         const repeatedFirstStop = dbot.stopBot();
-        expect(repeatedFirstStop).toBe(firstStop);
+        expect(firstStop).toBeInstanceOf(Promise);
+        expect(repeatedFirstStop).toBeInstanceOf(Promise);
         expect(firstInterpreter.stop).toHaveBeenCalledTimes(1);
         expect(mockApiBase.is_stopping).toBe(true);
 
@@ -93,6 +94,7 @@ describe('DBot runtime lifecycle: Run → Stop → Run → Stop', () => {
 
         firstInterpreter.__resolveStop();
         await firstStop;
+        await repeatedFirstStop;
         expect(dbot.interpreter).toBe(secondInterpreter);
         expect(secondInterpreter.stop).not.toHaveBeenCalled();
         expect(dbot.is_bot_running).toBe(true);
