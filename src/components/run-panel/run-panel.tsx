@@ -107,7 +107,7 @@ const RunPanel = observer(() => {
             <Drawer anchor='right' className={classNames('run-panel', { 'run-panel__container': is_desktop_layout, 'run-panel__container--tour-active': is_desktop_layout && active_tour })} contentClassName='run-panel__content' header={header} footer={is_desktop_layout && footer} is_open={is_drawer_open} toggleDrawer={toggleDrawer} width={366} zIndex={popover_zindex.RUN_PANEL}>{content}</Drawer>
         </div>
         <MobileDrawerFooter />
-        <StatisticsInfoModal is_mobile={!isDesktop} is_statistics_info_modal_open={is_statistics_info_modal_open} toggleStatisticsInfoModal={toggleStatisticsInfoModal} />
+        <StatisticsInfoModal is_mobile={!is_desktop_layout} is_statistics_info_modal_open={is_statistics_info_modal_open} toggleStatisticsInfoModal={toggleStatisticsInfoModal} />
     </>;
 });
 
