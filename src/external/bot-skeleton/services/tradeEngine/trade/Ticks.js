@@ -25,8 +25,8 @@ export default Engine =>
                     });
                 } catch (error) {
                     // A previous monitor may already have been removed during bot shutdown.
-                    // Do not turn that normal cleanup race into an unhandled rejection.
-                    globalObserver.emit('Error', error);
+                    // Do not turn that normal cleanup race into a fatal UI error.
+                    console.warn('[DBot] Previous tick monitor cleanup warning:', error);
                 }
 
                 const callback = ticks => {
@@ -42,8 +42,8 @@ export default Engine =>
                     tickListenerKey = key;
                 } catch (error) {
                     // The bot can be stopped while a new monitor is being installed.
-                    // Surface the backend problem without crashing the UI.
-                    globalObserver.emit('Error', error);
+                    // Do not route a shutdown race into the fatal UI error channel.
+                    console.warn('[DBot] Tick monitor install warning:', error);
                 }
             }
         }
