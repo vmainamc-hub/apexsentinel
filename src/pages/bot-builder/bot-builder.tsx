@@ -4,7 +4,6 @@ import classNames from 'classnames';
 import { observer } from 'mobx-react-lite';
 import { botNotification } from '@/components/bot-notification/bot-notification';
 import { notification_message } from '@/components/bot-notification/bot-notification-utils';
-import BotStore from '@/components/bot-store/bot-store';
 import { useStore } from '@/hooks/useStore';
 import { localize } from '@deriv-com/translations';
 import { useDevice } from '@deriv-com/ui';
@@ -122,7 +121,6 @@ const BotBuilder = observer(() => {
                     <WorkspaceWrapper />
                 </div>
             </div>
-            <BotStore />
             {active_tab === 1 && <BotBuilderTourHandler is_mobile={!isDesktop} />}
             <LoadModal />
             <SaveModal />
