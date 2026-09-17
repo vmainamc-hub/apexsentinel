@@ -15,6 +15,7 @@ on:
       - 'src/components/layout/app-logo/**'
       - 'src/pages/dashboard/announcements/announcements.tsx'
       - 'src/pages/dashboard/announcements/config.tsx'
+      - 'src/pages/main/**'
       - 'src/pages/bot-builder/**'
       - 'src/pages/bot-store/**'
       - 'src/components/bot-store/**'
