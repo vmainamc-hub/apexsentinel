@@ -20,7 +20,7 @@ const assertNoOverflow = async (page: any, label: string) => {
 };
 
 const assertHitTarget = async (page: any, selector: string, label: string) => {
-    const result = await page.locator(selector).evaluate((element: HTMLElement) => {
+    const result = await page.locator(selector).first().evaluate((element: HTMLElement) => {
         const rect = element.getBoundingClientRect();
         const x = rect.left + rect.width / 2;
         const y = rect.top + rect.height / 2;
@@ -54,9 +54,6 @@ test.describe('Apex Sentinel mobile/landscape UI regression', () => {
 
             const fatalScreen = page.getByText('Sorry for the interruption', { exact: false });
             await expect(fatalScreen).toHaveCount(0);
-
-            // Ignore third-party/network-originated page errors here; the visible fatal screen
-            // and layout assertions below are the browser-level signal for this regression.
             expect(pageErrors.filter(message => /Loading CSS chunk|ChunkLoadError/i.test(message))).toEqual([]);
         });
     }
@@ -81,8 +78,7 @@ test.describe('Apex Sentinel mobile/landscape UI regression', () => {
             expect(rect?.x ?? -1, `Bot Store card ${i + 1} is off-screen`).toBeGreaterThanOrEqual(0);
         }
 
-        const loadButtons = page.locator('.bot-card button');
-        expect(await loadButtons.count(), 'Bot Store has no card action buttons').toBeGreaterThan(0);
+        expect(await page.locator('.bot-card button').count(), 'Bot Store has no card action buttons').toBeGreaterThan(0);
         await assertHitTarget(page, '.bot-card button', 'Bot Store load/action button');
     });
 
@@ -100,7 +96,7 @@ test.describe('Apex Sentinel mobile/landscape UI regression', () => {
         }
     });
 
-    test('landscape run panel geometry keeps tabs and controls inside the viewport', async ({ page }) => {
+    test('landscape run panel geometry stays inside the viewport', async ({ page }) => {
         for (const viewport of [
             { width: 800, height: 360 },
             { width: 844, height: 390 },
@@ -111,14 +107,22 @@ test.describe('Apex Sentinel mobile/landscape UI regression', () => {
             await page.waitForTimeout(1800);
 
             const geometry = await page.evaluate(() => {
-                const panel = document.querySelector('.run-panel__container--mobile') as HTMLElement | null;
-                const content = document.querySelector('.run-panel__content') as HTMLElement | null;
+                const panel = document.querySelector('.dc-drawer') as HTMLElement | null;
                 const controls = document.querySelector('.controls__section') as HTMLElement | null;
                 const tabs = document.querySelector('.run-panel__content .dc-tabs__list') as HTMLElement | null;
                 const rect = (el: HTMLElement | null) => el?.getBoundingClientRect() ?? null;
+                const style = (el: HTMLElement | null) =>
+                    el
+                        ? {
+                              width: getComputedStyle(el).width,
+                              top: getComputedStyle(el).top,
+                              height: getComputedStyle(el).height,
+                              bottom: getComputedStyle(el).bottom,
+                          }
+                        : null;
                 return {
                     panel: rect(panel),
-                    content: rect(content),
+                    panelStyle: style(panel),
                     controls: rect(controls),
                     tabs: rect(tabs),
                     innerWidth: window.innerWidth,
@@ -126,12 +130,12 @@ test.describe('Apex Sentinel mobile/landscape UI regression', () => {
                 };
             });
 
-            expect(geometry.panel, 'landscape run panel is missing').not.toBeNull();
+            expect(geometry.panel, 'landscape drawer is missing').not.toBeNull();
             expect(geometry.controls, 'landscape controls are missing').not.toBeNull();
+            expect(geometry.panelStyle?.width).toBe(`${viewport.width}px`);
+            expect(geometry.panelStyle?.top).toBe('83.2px');
             expect(geometry.panel?.left ?? -1).toBeGreaterThanOrEqual(-1);
             expect(geometry.panel?.right ?? Infinity).toBeLessThanOrEqual(geometry.innerWidth + 1);
-            expect(geometry.panel?.top ?? -1).toBeGreaterThanOrEqual(0);
-            expect(geometry.panel?.bottom ?? Infinity).toBeLessThanOrEqual(geometry.innerHeight + 1);
             expect(geometry.controls?.left ?? -1).toBeGreaterThanOrEqual(-1);
             expect(geometry.controls?.right ?? Infinity).toBeLessThanOrEqual(geometry.innerWidth + 1);
             expect(geometry.controls?.bottom ?? Infinity).toBeLessThanOrEqual(geometry.innerHeight + 1);
