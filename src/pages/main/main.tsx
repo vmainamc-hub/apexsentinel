@@ -42,7 +42,7 @@ import RunPanel from '../../components/run-panel';
 import ChartModal from '../chart/chart-modal';
 import Dashboard from '../dashboard';
 import RunStrategy from '../dashboard/run-strategy';
-import BotStore from '../bot-store';
+import BotStore from '../bot-store/bot-store';
 import './main.scss';
 
 const ChartWrapper = lazy(() => import('../chart/chart-wrapper'));
@@ -428,39 +428,21 @@ const AppWrapper = observer(() => {
                 <ChartModal />
                 <TradingViewModal />
             </DesktopWrapper>
-            <MobileWrapper>{!is_open && <RunPanel />}</MobileWrapper>
-            <Dialog
-                cancel_button_text={cancel_button_text || localize('Cancel')}
-                className='dc-dialog__wrapper--fixed'
-                confirm_button_text={ok_button_text || localize('Ok')}
-                has_close_icon
-                is_mobile_full_width={false}
-                is_visible={is_dialog_open}
-                onCancel={onCancelButtonClick}
-                onClose={onCloseDialog}
-                onConfirm={onOkButtonClick || onCloseDialog}
-                portal_element_id='modal_root'
-                title={title}
-                login={handleLoginGeneration}
-                dismissable={dismissable}
-                is_closed_on_cancel={is_closed_on_cancel}
-            >
-                {message}
-            </Dialog>
-
-            {(() => {
-                const modalProps = getTradeTypeModalProps();
-                return (
-                    <TradeTypeConfirmationModal
-                        is_visible={modalProps.is_visible}
-                        trade_type_display_name={modalProps.trade_type_display_name}
-                        current_trade_type={modalProps.current_trade_type}
-                        current_trade_type_display_name={modalProps.current_trade_type_display_name}
-                        onConfirm={modalProps.onConfirm}
-                        onCancel={modalProps.onCancel}
-                    />
-                );
-            })()}
+            <MobileWrapper>
+                <Dialog
+                    title={title}
+                    message={message}
+                    is_visible={is_dialog_open}
+                    has_close_button={dismissable}
+                    onClose={onCloseDialog}
+                    cancel_button_text={cancel_button_text}
+                    ok_button_text={ok_button_text}
+                    onCancel={onCancelButtonClick}
+                    onOk={onOkButtonClick}
+                    is_closed_on_cancel={is_closed_on_cancel}
+                />
+            </MobileWrapper>
+            <TradeTypeConfirmationModal {...getTradeTypeModalProps()} />
         </React.Fragment>
     );
 });
