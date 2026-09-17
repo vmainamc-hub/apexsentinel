@@ -3,6 +3,7 @@ import { observer } from 'mobx-react-lite';
 import { useStore } from '@/hooks/useStore';
 import { load } from '@/external/bot-skeleton';
 import { localize } from '@deriv-com/translations';
+import { validateBotXml } from '@/services/bot-store.service';
 import './bot-store.scss';
 
 export type BotStoreEntry = {
@@ -23,10 +24,8 @@ type BotStoreManifest = {
     bots: BotStoreEntry[];
 };
 
-// Set this to the raw GitHub URL of the bot-store manifest when your bot
-// repository is ready. Keeping the source in one place means the store UI
-// never needs to know the repository layout.
-export const BOT_STORE_MANIFEST_URL = '';
+export const BOT_STORE_MANIFEST_URL =
+    'https://raw.githubusercontent.com/vmainamc-hub/sentinel-bot-store/main/catalogue.json';
 
 const BotStore = observer(() => {
     const { dashboard } = useStore();
@@ -38,12 +37,6 @@ const BotStore = observer(() => {
     const [loading_bot_id, setLoadingBotId] = useState('');
 
     const fetchManifest = async () => {
-        if (!BOT_STORE_MANIFEST_URL) {
-            setManifest({ version: 1, bots: [] });
-            setIsLoading(false);
-            return;
-        }
-
         setIsLoading(true);
         setError('');
         try {
@@ -61,7 +54,7 @@ const BotStore = observer(() => {
     };
 
     useEffect(() => {
-        fetchManifest();
+        void fetchManifest();
     }, []);
 
     const categories = useMemo(() => {
@@ -95,14 +88,19 @@ const BotStore = observer(() => {
             const response = await fetch(bot.xml_url, { cache: 'no-store' });
             if (!response.ok) throw new Error(`Bot XML returned ${response.status}`);
             const xml = await response.text();
+            const validation = validateBotXml(xml);
+            if (!validation.valid) {
+                throw new Error(`${bot.name}: ${validation.errors[0]}`);
+            }
+
             const result = await load({
                 block_string: xml,
                 file_name: `${bot.name}.xml`,
                 strategy_id: bot.id,
                 from: 'bot_store',
-                drop_event: null,
+                drop_event: {},
                 workspace: window.Blockly.derivWorkspace,
-                showIncompatibleStrategyDialog: null,
+                showIncompatibleStrategyDialog: false,
                 show_snackbar: true,
             });
 
@@ -114,7 +112,7 @@ const BotStore = observer(() => {
             window.location.hash = 'bot_builder';
         } catch (load_error) {
             console.error(`[BotStore] Failed to load ${bot.id}:`, load_error);
-            setError(localize('This bot could not be loaded into Bot Builder.'));
+            setError(load_error instanceof Error ? load_error.message : localize('This bot could not be loaded into Bot Builder.'));
         } finally {
             setLoadingBotId('');
         }
@@ -159,7 +157,7 @@ const BotStore = observer(() => {
             {error && (
                 <div className='bot-store__error' role='alert'>
                     <span>{error}</span>
-                    <button onClick={fetchManifest} type='button'>
+                    <button onClick={() => void fetchManifest()} type='button'>
                         {localize('Retry')}
                     </button>
                 </div>
@@ -170,12 +168,8 @@ const BotStore = observer(() => {
             ) : filtered_bots.length === 0 ? (
                 <div className='bot-store__empty'>
                     <div className='bot-store__empty-icon'>🤖</div>
-                    <h2>{BOT_STORE_MANIFEST_URL ? localize('No bots found') : localize('Your Bot Store is ready')}</h2>
-                    <p>
-                        {BOT_STORE_MANIFEST_URL
-                            ? localize('Try another search or category.')
-                            : localize('Connect your GitHub bot catalogue to start populating the store.')}
-                    </p>
+                    <h2>{localize('No bots found')}</h2>
+                    <p>{localize('Try another search or category.')}</p>
                 </div>
             ) : (
                 <div className='bot-store__grid'>
@@ -200,7 +194,7 @@ const BotStore = observer(() => {
                             <button
                                 className='bot-card__load'
                                 disabled={loading_bot_id === bot.id}
-                                onClick={() => loadBot(bot)}
+                                onClick={() => void loadBot(bot)}
                                 type='button'
                             >
                                 {loading_bot_id === bot.id ? localize('Loading...') : localize('Load into Bot Builder')}
