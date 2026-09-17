@@ -65,20 +65,26 @@
 
 @media (orientation: landscape) and (max-width: 1024px) {
     .dc-drawer {
-        /* Landscape phones have little vertical space. Keep the closed handle
-           at the bottom and let the open state rise to the viewport top. */
+        width: 100vw !important;
         height: calc(100dvh - 5.2rem) !important;
-        top: calc(100dvh - 8.8rem) !important;
+        top: 5.2rem !important;
 
         .controls__buttons { width: 100%; padding-inline: 1rem; }
         .controls__animation { width: 100%; }
-        &__container { height: calc(100% - 3.6rem); }
+        &__container { height: 100%; }
+    }
+
+    .dc-drawer--open {
+        transform: translateY(0) !important;
     }
 
     .dc-drawer .run-panel-tab__content--mobile {
-        top: 3.6rem;
+        position: absolute;
+        top: 0;
         bottom: 5.2rem;
         height: auto;
-        max-height: calc(100dvh - 8.8rem);
+        max-height: none;
+        width: 100%;
+        overflow: hidden;
     }
 }
