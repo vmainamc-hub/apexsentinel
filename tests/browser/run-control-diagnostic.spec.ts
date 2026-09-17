@@ -3,13 +3,15 @@ import { expect, test } from '@playwright/test';
 test('diagnose landscape Run control hit target', async ({ page }) => {
     await page.setViewportSize({ width: 844, height: 390 });
     await page.goto('/#bot_builder', { waitUntil: 'domcontentloaded' });
-    await page.locator('#id-bot-builder').waitFor({ state: 'visible', timeout: 15000 });
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(1800);
 
     const tour = page.locator('.tour-dialog').first();
     if (await tour.count() > 0 && await tour.isVisible().catch(() => false)) {
-        await tour.getByRole('button', { name: 'Skip', exact: true }).click();
-        await expect(tour).toBeHidden({ timeout: 5000 });
+        const skip = tour.getByRole('button', { name: 'Skip', exact: true });
+        if (await skip.count() > 0) {
+            await skip.click();
+            await expect(tour).toBeHidden({ timeout: 5000 });
+        }
     }
 
     const button = page.locator('#db-animation__run-button').first();
@@ -37,11 +39,11 @@ test('diagnose landscape Run control hit target', async ({ page }) => {
         return {
             button: describe(element),
             hit: describe(document.elementFromPoint(x, y)),
-            stack: document.elementsFromPoint(x, y).slice(0, 10).map(describe),
+            stack: document.elementsFromPoint(x, y).slice(0, 12).map(describe),
             ancestors: (() => {
                 const result = [] as unknown[];
                 let node: Element | null = element;
-                while (node && result.length < 10) {
+                while (node && result.length < 12) {
                     result.push(describe(node));
                     node = node.parentElement;
                 }
