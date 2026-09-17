@@ -75,10 +75,9 @@
         &__container { height: 100%; }
     }
 
-    .dc-drawer:not(.dc-drawer--open) {
-        transform: translateY(calc(100% - 3.6rem));
-    }
-
+    // The closed drawer is already positioned from 5.2rem to the bottom of the
+    // landscape viewport. Do not translate it farther down: that makes its box
+    // extend below the viewport and cover the fixed run controls.
     .dc-drawer--open {
         transform: translateY(0) !important;
     }
