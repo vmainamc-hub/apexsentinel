@@ -58,7 +58,7 @@ jest.mock('../utils', () => ({
 }));
 
 const Interpreter = require('../../services/tradeEngine/utils/interpreter').default;
-const DBot = require('../dbot').default;
+const dbot = require('../dbot').default;
 
 describe('DBot runtime lifecycle: Run → Stop → Run → Stop', () => {
     beforeEach(() => {
@@ -66,13 +66,13 @@ describe('DBot runtime lifecycle: Run → Stop → Run → Stop', () => {
         mockApiBase.setIsRunning.mockClear();
         mockCreatedInterpreters.length = 0;
         Interpreter.mockClear();
+        dbot.stop_promise = null;
+        dbot.is_bot_running = false;
+        dbot.generateCode = jest.fn(() => 'runtime-test-code');
+        dbot.interpreter = Interpreter();
     });
 
     test('a new Run survives a previous Stop and repeated Stop is single-flight', async () => {
-        const dbot = new DBot();
-        dbot.generateCode = jest.fn(() => 'runtime-test-code');
-        dbot.interpreter = Interpreter();
-
         dbot.runBot();
         const firstInterpreter = dbot.interpreter;
         expect(firstInterpreter.run).toHaveBeenCalledWith('runtime-test-code');
