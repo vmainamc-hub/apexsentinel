@@ -1,214 +1,36 @@
-name: Repair DBot shutdown lifecycle
+name: Verify DBot shutdown repair
 
 on:
   push:
     paths:
+      - 'src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js'
+      - 'src/external/bot-skeleton/services/tradeEngine/trade/Ticks.js'
+      - 'src/external/bot-skeleton/scratch/dbot.js'
+      - 'src/external/bot-skeleton/services/api/api-base.ts'
       - '.github/workflows/repair-dbot-shutdown.yml'
 
-permissions:
-  contents: write
-
 jobs:
-  repair:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Patch shutdown lifecycle
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          def patch(path, old, new):
-              p = Path(path)
-              s = p.read_text()
-              if old not in s:
-                  raise SystemExit(f'anchor not found: {path}')
-              p.write_text(s.replace(old, new, 1))
-
-          patch('src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js',
-                "const timeMachineEnabled = bot => botInitialized(bot) && bot.tradeEngine.options.timeMachineEnabled;\n",
-                "const timeMachineEnabled = bot => botInitialized(bot) && bot.tradeEngine.options.timeMachineEnabled;\nconst STOP_CONTRACT_WAIT_TIMEOUT_MS = 15000;\n")
-
-          old = """                const global_timeouts = globalObserver.getState('global_timeouts') ?? [];
-                const is_timeouts_cancellable = Object.keys(global_timeouts).every(
-                    timeout => global_timeouts[timeout].is_cancellable
-                );
-
-                if (!bot.tradeEngine.contractId && is_timeouts_cancellable) {
-                    api_base.is_stopping = true;
-                    global_timeouts.forEach(timeout => clearTimeout(global_timeouts[timeout]));
-                    await terminateSession();
-                } else if (
-                    bot.tradeEngine.isSold === false &&
-                    !$scope.is_error_triggered &&
-                    isMultiplierContract(bot?.tradeEngine?.data?.contract?.contract_type ?? '')
-                ) {
-                    await new Promise(resolve => {
-                        globalObserver.register('contract.status', contractStatus => {
-                            if (contractStatus.id === 'contract.sold') resolve();
-                        });
-                    });
-                    await terminateSession();
-                } else {
-                    api_base.is_stopping = true;
-                    await terminateSession();
-                }
-"""
-          new = """                api_base.is_stopping = true;
-                const global_timeouts = globalObserver.getState('global_timeouts') ?? [];
-                const timeoutEntries = Object.entries(global_timeouts);
-                const is_timeouts_cancellable = timeoutEntries.every(([, timeout]) => timeout?.is_cancellable !== false);
-
-                if (!bot.tradeEngine.contractId && is_timeouts_cancellable) {
-                    timeoutEntries.forEach(([, timeout]) => {
-                        const handle = timeout?.handle ?? timeout?.timer ?? timeout;
-                        if (handle != null) clearTimeout(handle);
-                    });
-                    await terminateSession();
-                } else if (
-                    bot.tradeEngine.isSold === false &&
-                    !$scope.is_error_triggered &&
-                    isMultiplierContract(bot?.tradeEngine?.data?.contract?.contract_type ?? '')
-                ) {
-                    await new Promise(resolve => {
-                        let timeout_id;
-                        const onContractStatus = contractStatus => {
-                            if (contractStatus.id !== 'contract.sold') return;
-                            clearTimeout(timeout_id);
-                            globalObserver.unregister('contract.status', onContractStatus);
-                            resolve();
-                        };
-                        globalObserver.register('contract.status', onContractStatus);
-                        timeout_id = setTimeout(() => {
-                            globalObserver.unregister('contract.status', onContractStatus);
-                            console.warn('[DBot] Timed out waiting for contract.sold during stop; terminating session safely.');
-                            resolve();
-                        }, STOP_CONTRACT_WAIT_TIMEOUT_MS);
-                    });
-                    await terminateSession();
-                } else {
-                    await terminateSession();
-                }
-"""
-          patch('src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js', old, new)
-
-          patch('src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js',
-                """            } catch (error) {
-                globalObserver.emit('Error', error);
-            }
-        })();
-""",
-                """            } catch (error) {
-                console.warn('[DBot] Tick-service cleanup warning during stop:', error);
-            }
-        })();
-""")
-
-          patch('src/external/bot-skeleton/scratch/dbot.js',
-                """            } catch (error) {
-                globalObserver.emit('Error', error);
-            } finally {
-                this.stop_promise = null;
-            }
-""",
-                """            } catch (error) {
-                console.error('[DBot] Stop cleanup failed:', error);
-            } finally {
-                this.stop_promise = null;
-            }
-""")
-
-          patch('src/external/bot-skeleton/scratch/dbot.js',
-                """                        } catch (error) {
-                            globalObserver.emit('Error', error);
-                        }
-""",
-                """                        } catch (error) {
-                            console.warn('[DBot] Tick monitor restore warning after stop:', error);
-                        }
-""")
-
-          patch('src/external/bot-skeleton/services/tradeEngine/trade/Ticks.js',
-                """                } catch (error) {
-                    // A previous monitor may already have been removed during bot shutdown.
-                    // Do not turn that normal cleanup race into an unhandled rejection.
-                    globalObserver.emit('Error', error);
-                }
-""",
-                """                } catch (error) {
-                    console.warn('[DBot] Previous tick monitor cleanup warning:', error);
-                }
-""")
-
-          patch('src/external/bot-skeleton/services/tradeEngine/trade/Ticks.js',
-                """                } catch (error) {
-                    // The bot can be stopped while a new monitor is being installed.
-                    // Surface the backend problem without crashing the UI.
-                    globalObserver.emit('Error', error);
-                }
-""",
-                """                } catch (error) {
-                    console.warn('[DBot] Tick monitor install warning:', error);
-                }
-""")
-
-          patch('src/external/bot-skeleton/services/api/api-base.ts',
-                """    clearSubscriptions() {
-        this.subscriptions.forEach(s => s.unsubscribe());
-        this.subscriptions = [];
-
-        const global_timeouts = globalObserver.getState('global_timeouts') ?? [];
-
-        global_timeouts.forEach((_: unknown, i: number) => {
-            clearTimeout(i);
-        });
-    }
-""",
-                """    clearSubscriptions() {
-        this.subscriptions.forEach(subscription => {
-            try {
-                subscription?.unsubscribe?.();
-            } catch (error) {
-                console.warn('[APIBase] Subscription cleanup warning:', error);
-            }
-        });
-        this.subscriptions = [];
-
-        const global_timeouts = globalObserver.getState('global_timeouts') ?? [];
-        Object.values(global_timeouts).forEach((timeout: any) => {
-            const handle = timeout?.handle ?? timeout?.timer ?? timeout;
-            if (handle != null) clearTimeout(handle);
-        });
-    }
-""")
-          PY
-
-      - name: Verify source repair
+      - name: Static verification
         run: |
           grep -q 'STOP_CONTRACT_WAIT_TIMEOUT_MS' src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js
-          grep -q "Timed out waiting for contract.sold during stop" src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js
+          grep -q 'Timed out waiting for contract.sold during stop' src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js
           ! grep -q 'global_timeouts.forEach' src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js
-          grep -q "console.error('[DBot] Stop cleanup failed:'" src/external/bot-skeleton/scratch/dbot.js
-          grep -q 'Object.values(global_timeouts)' src/external/bot-skeleton/services/api/api-base.ts
+          grep -q "console.warn('[DBot] Tick-service cleanup warning during stop:'" src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js
+          grep -q "console.warn('[DBot] Previous tick monitor cleanup warning:'" src/external/bot-skeleton/services/tradeEngine/trade/Ticks.js
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Test
+      - name: Unit tests
         run: npm test -- --runInBand
 
-      - name: Build
-        run: npm run build
+      - name: Type check
+        run: npm run type-check
 
-      - name: Commit verified repair
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/external/bot-skeleton/services/tradeEngine/utils/interpreter.js src/external/bot-skeleton/scratch/dbot.js src/external/bot-skeleton/services/tradeEngine/trade/Ticks.js src/external/bot-skeleton/services/api/api-base.ts
-          git diff --cached --quiet && exit 0
-          git commit -m "Fix DBot shutdown race and cleanup error propagation"
-          git push
+      - name: Production build
+        run: npm run build
