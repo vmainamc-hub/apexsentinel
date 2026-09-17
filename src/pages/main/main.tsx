@@ -423,11 +423,11 @@ const AppWrapper = observer(() => {
             <DesktopWrapper>
                 <div className='main__run-strategy-wrapper'>
                     <RunStrategy />
+                    <RunPanel />
                 </div>
                 <ChartModal />
                 <TradingViewModal />
             </DesktopWrapper>
-            <RunPanel />
             <MobileWrapper>
                 <Dialog
                     title={title}
