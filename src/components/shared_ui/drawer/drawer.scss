@@ -12,6 +12,11 @@
     &--right { display: flex; flex-direction: row; left: calc(100vw - 16px); }
 
     @include mobile-or-tablet-screen {
+        // Keep the closed drawer handle above the portaled mobile Run footer.
+        // The footer is a separate viewport-level stacking context, so the
+        // drawer must outrank it or the handle cannot be tapped to open the
+        // Summary / Transactions / Journal panel.
+        z-index: 10001;
         width: 100vw !important;
         height: calc(100% - 10.1rem) !important;
         top: calc(100% - 9.8rem) !important;
