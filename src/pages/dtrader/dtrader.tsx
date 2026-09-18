@@ -1,5 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { api_base } from '@/external/bot-skeleton';
+import React, { useEffect, useMemo, useState } from 'react';
+import { observer } from 'mobx-react-lite';
+import { ChartTitle, SmartChart, TGranularity } from '@deriv-com/smartcharts-champion';
+import { useDevice } from '@deriv-com/ui';
+import { useSmartChartAdaptor } from '@/hooks/useSmartChartAdaptor';
+import chart_api from '@/external/bot-skeleton/services/api/chart-api';
 import { useStore } from '@/hooks/useStore';
 import './dtrader.scss';
 
@@ -30,10 +34,9 @@ const CONTRACTS: { id: ContractType; label: string }[] = [
     { id: 'TOUCH', label: 'Touch' }, { id: 'NOTOUCH', label: 'No Touch' },
 ];
 
-const WS_URL = 'wss://ws.derivws.com/websockets/v3?app_id=1089';
-
-function digitFromQuote(quote: number, pipSize = 2) {
-    return Math.abs(Math.round(quote * Math.pow(10, pipSize))) % 10;
+function digitFromQuote(quote: number, decimals = 2) {
+    const fixed = Math.abs(quote).toFixed(Math.max(0, decimals));
+    return Number(fixed.charAt(fixed.length - 1)) || 0;
 }
 
 function labelFor(type: ContractType, barrier: number) {
@@ -51,12 +54,13 @@ function labelFor(type: ContractType, barrier: number) {
     return 'No Touch ' + barrier;
 }
 
-export default function DTrader() {
-    const { client } = useStore();
+export default observer(function DTrader() {
+    const { client, common, ui } = useStore();
+    const { isDesktop, isMobile } = useDevice();
+    const { chartData, getQuotes, subscribeQuotes, unsubscribeQuotes } = useSmartChartAdaptor();
     const [symbol, setSymbol] = useState('1HZ10V');
-    const [markets, setMarkets] = useState<{ symbol: string; name: string }[]>(
-        FALLBACK_MARKETS.map(([symbol, name]) => ({ symbol, name }))
-    );
+    const [markets, setMarkets] = useState<any[]>(FALLBACK_MARKETS.map(([symbol, name]) => ({ symbol, name, market: 'synthetic_index', pip_size: 0.01 })));
+    const [marketOpen, setMarketOpen] = useState(false);
     const [ticks, setTicks] = useState<Tick[]>([]);
     const [type, setType] = useState<ContractType>('DIGITUNDER');
     const [barrier, setBarrier] = useState(6);
@@ -70,8 +74,6 @@ export default function DTrader() {
     const [feedState, setFeedState] = useState('CONNECTING');
     const [message, setMessage] = useState('');
 
-    const wsRef = useRef<WebSocket | null>(null);
-    const historyRef = useRef<Tick[]>([]);
 
     const live1000 = ticks.slice(-1000);
     const analysis = ticks.slice(-windowSize);
@@ -80,6 +82,8 @@ export default function DTrader() {
     const evenPct = live1000.filter(t => t.digit % 2 === 0).length / total * 100;
     const oddPct = 100 - evenPct;
     const last = live1000.length ? live1000[live1000.length - 1].digit : '—';
+    const selectedMarket = markets.find(m => m.symbol === symbol) || markets[0];
+    const decimals = selectedMarket?.pip_size ? Math.max(0, Math.round(-Math.log10(Number(selectedMarket.pip_size)))) : 2;
 
     const psychology = useMemo(() => {
         const n = Math.min(1000, ticks.length);
@@ -97,72 +101,51 @@ export default function DTrader() {
         let cancelled = false;
         (async () => {
             try {
-                const res = await (api_base.api as any)?.send?.({ active_symbols: 'brief' });
+                if (!chart_api.api) await chart_api.init();
+                const res = await chart_api.api?.send({ active_symbols: 'brief' });
                 const rows = Array.isArray(res?.active_symbols) ? res.active_symbols : [];
-                const live = rows
-                    .filter((m: any) => {
-                        const s = String(m?.underlying_symbol || '');
-                        const market = String(m?.market || '').toLowerCase();
-                        return m?.underlying_symbol && (
-                            market.includes('synthetic') || market.includes('derived') ||
-                            /^(R_|1HZ|BOOM|CRASH|RDBULL|RDBEAR|JD|JUMP|STEP|RANGE)/.test(s)
-                        );
-                    })
-                    .map((m: any) => ({ symbol: String(m.underlying_symbol), name: String(m.underlying_symbol_name || m.underlying_symbol) }));
+                const live = rows.filter((m: any) => {
+                    const s = String(m?.underlying_symbol || '');
+                    const market = String(m?.market || '').toLowerCase();
+                    return s && (market.includes('synthetic') || market.includes('derived') || /^(R_|1HZ|BOOM|CRASH|RDBULL|RDBEAR|JD|JUMP|STEP|RANGE)/.test(s));
+                }).map((m: any) => ({ symbol: String(m.underlying_symbol), name: String(m.display_name || m.underlying_symbol), market: String(m.market || 'synthetic_index'), pip_size: Number(m.pip_size || m.pip || 0.01) }));
                 if (!cancelled && live.length) setMarkets(live);
-            } catch {
-                // The curated fallback remains available if metadata is unavailable.
-            }
+            } catch {}
         })();
         return () => { cancelled = true; };
     }, []);
 
     useEffect(() => {
-        let closed = false;
-        let ws: WebSocket;
-        try { ws = new WebSocket(WS_URL); } catch { setFeedState('ERROR'); return; }
-        wsRef.current = ws;
-        setFeedState('CONNECTING');
-
-        ws.onopen = () => {
-            if (closed) return;
-            setFeedState('LIVE');
-            ws.send(JSON.stringify({ ticks_history: symbol, adjust_start_time: 1, count: 1000, end: 'latest', style: 'ticks' }));
-            ws.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
-        };
-        ws.onmessage = event => {
-            if (closed) return;
+        let cancelled = false;
+        let unsubscribe: (() => void) | undefined;
+        setFeedState('LOADING');
+        (async () => {
             try {
-                const msg = JSON.parse(event.data);
-                if (msg.error) { setMessage(msg.error.message || 'Deriv feed error'); return; }
-                if (msg.history) {
-                    const prices = msg.history.prices || [];
-                    const times = msg.history.times || [];
-                    const seeded = prices.map((q: number, i: number) => ({ epoch: Number(times[i]), quote: Number(q), digit: digitFromQuote(Number(q), Number(msg.pip_size ?? 2)) }));
-                    historyRef.current = seeded.slice(-1000);
-                    setTicks(historyRef.current.slice());
-                }
-                if (msg.tick) {
-                    const quote = Number(msg.tick.quote);
-                    const tick = { epoch: Number(msg.tick.epoch), quote, digit: digitFromQuote(quote, Number(msg.tick.pip_size ?? 2)) };
-                    historyRef.current = [...historyRef.current, tick].slice(-1000);
-                    setTicks(historyRef.current.slice());
-                }
+                const response = await getQuotes({ symbol, granularity: 0, count: 1000 });
+                const prices = response?.history?.prices || [];
+                if (cancelled) return;
+                setTicks(prices.map((q: number) => ({ epoch: 0, quote: Number(q), digit: digitFromQuote(Number(q), decimals) })).slice(-1000));
+                setFeedState('LIVE');
+                unsubscribe = subscribeQuotes({ symbol, granularity: 0 }, (quote: any) => {
+                    if (cancelled) return;
+                    const price = Number(quote?.Close ?? quote?.quote ?? quote?.price);
+                    if (!Number.isFinite(price)) return;
+                    setTicks(previous => [...previous, { epoch: Number(quote?.Date || Date.now() / 1000), quote: price, digit: digitFromQuote(price, decimals) }].slice(-1000));
+                    setFeedState('LIVE');
+                });
             } catch {
-                // Ignore malformed feed frames.
+                if (!cancelled) setFeedState('ERROR');
             }
-        };
-        ws.onerror = () => setFeedState('ERROR');
-        ws.onclose = () => { if (!closed) setFeedState('RECONNECTING'); };
+        })();
         return () => {
-            closed = true;
-            try { ws.close(); } catch {}
-            wsRef.current = null;
+            cancelled = true;
+            try { unsubscribe?.(); } catch {}
+            try { unsubscribeQuotes({ symbol, granularity: 0 }); } catch {}
         };
-    }, [symbol]);
+    }, [symbol, decimals, getQuotes, subscribeQuotes, unsubscribeQuotes]);
 
     useEffect(() => {
-        if (!client?.is_logged_in || !api_base.api?.send) {
+        if (!client?.is_logged_in || !chart_api.api?.send) {
             setProposal(null);
             return;
         }
@@ -176,7 +159,7 @@ export default function DTrader() {
                     underlying_symbol: symbol,
                 };
                 if (['DIGITOVER','DIGITUNDER','DIGITMATCH','DIGITDIFF','HIGHER','LOWER','TOUCH','NOTOUCH'].includes(type)) payload.barrier = barrier;
-                const res = await (api_base.api as any).send(payload);
+                const res = await chart_api.api.send(payload);
                 if (!cancelled) setProposal(res?.proposal || null);
             } catch (e: any) {
                 if (!cancelled) { setProposal(null); setMessage(e?.message || 'Proposal request failed'); }
@@ -188,10 +171,10 @@ export default function DTrader() {
     }, [client?.is_logged_in, client?.currency, symbol, type, barrier, duration, stake]);
 
     useEffect(() => {
-        if (!openContract?.id || !api_base.api?.send) return;
+        if (!openContract?.id || !chart_api.api?.send) return;
         const timer = window.setInterval(async () => {
             try {
-                const res = await (api_base.api as any).send({ proposal_open_contract: 1, contract_id: openContract.id });
+                const res = await chart_api.api.send({ proposal_open_contract: 1, contract_id: openContract.id });
                 const c = res?.proposal_open_contract;
                 if (!c) return;
                 setOpenContract((p: any) => p ? { ...p, status: c.status, profit: Number(c.profit || 0), bid: Number(c.bid_price || 0), payout: Number(c.payout || 0) } : p);
@@ -204,7 +187,7 @@ export default function DTrader() {
     async function buy() {
         if (!proposal?.id || !client?.is_logged_in) { setMessage('Log in to your Deriv account before buying.'); return; }
         try {
-            const res = await (api_base.api as any).send({ buy: proposal.id, price: Number(proposal.ask_price) });
+            const res = await chart_api.api.send({ buy: proposal.id, price: Number(proposal.ask_price) });
             const id = Number(res?.buy?.contract_id);
             if (!id) throw new Error(res?.error?.message || 'Deriv did not return a contract ID.');
             setOpenContract({ id, label: labelFor(type, barrier), status: 'open', profit: 0, bid: Number(proposal.ask_price) });
@@ -217,35 +200,31 @@ export default function DTrader() {
     async function sell() {
         if (!openContract?.id) return;
         try {
-            await (api_base.api as any).send({ sell: openContract.id, price: 0 });
+            await chart_api.api.send({ sell: openContract.id, price: 0 });
             setMessage('Sell request sent for contract ' + openContract.id);
         } catch (e: any) { setMessage(e?.message || 'Sell request failed.'); }
     }
 
     const filteredMarkets = markets.filter(m => (m.symbol + ' ' + m.name).toLowerCase().includes(search.toLowerCase()));
 
-    return (
-        <div className='dtrader'>
-            <div className='dtrader__topbar'>
-                <div><div className='dtrader__eyebrow'>SENTINEL</div><strong>DTrader</strong></div>
-                <div className='dtrader__market-tabs'>
-                    {markets.slice(0, 6).map(m => <button key={m.symbol} className={m.symbol === symbol ? 'active' : ''} onClick={() => setSymbol(m.symbol)}>{m.symbol}</button>)}
-                </div>
-                <div className={'dtrader__feed dtrader__feed--' + feedState.toLowerCase()}>{feedState}</div>
-            </div>
+    const chartSettings = { assetInformation: false, countdown: true, isHighestLowestMarkerEnabled: false, language: common.current_language.toLowerCase(), position: ui.is_chart_layout_default ? 'bottom' : 'left', theme: ui.is_dark_mode_on ? 'dark' : 'light' };
 
-            <div className='dtrader__toolbar'>
-                <input value={search} onChange={e => setSearch(e.target.value)} placeholder='Search synthetic / derived market…' />
-                {search && <div className='dtrader__search-results'>{filteredMarkets.slice(0, 24).map(m => <button key={m.symbol} onClick={() => { setSymbol(m.symbol); setSearch(''); }}>{m.symbol} · {m.name}</button>)}</div>}
+    return (
+        <div className='dtrader dtrader--real'>
+            <div className='dt-header'>
+                <div className='dt-brand'><div className='dt-brand-mark'>S</div><div><strong>DTrader</strong><span>Sentinel trading cockpit</span></div></div>
+                <div className='dt-market-picker-wrap'>
+                    <button className='dt-market-picker' onClick={() => setMarketOpen(v => !v)}><b>{symbol}</b><span>{selectedMarket?.name || symbol}</span><em>⌄</em></button>
+                    {marketOpen && <div className='dt-market-menu'><div className='dt-search'><input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder='Search synthetic / derived markets…' /><button onClick={() => setMarketOpen(false)}>×</button></div><div className='dt-market-list'>{filteredMarkets.slice(0, 80).map(m => <button key={m.symbol} className={m.symbol === symbol ? 'selected' : ''} onClick={() => { setSymbol(m.symbol); setMarketOpen(false); setSearch(''); }}><strong>{m.symbol}</strong><span>{m.name}</span></button>)}</div></div>}
+                </div>
+                <div className='dt-header-status'><i className={feedState.toLowerCase()} />{feedState}<span>{client?.loginid || 'Demo account'}</span></div>
             </div>
 
             <div className='dtrader__grid'>
                 <main>
-                    <section className='dtrader__panel dtrader__chart'>
-                        <div className='dtrader__panel-head'><span>{markets.find(m => m.symbol === symbol)?.name || symbol}</span><b>{(ticks.length ? ticks[ticks.length - 1].quote.toFixed(5) : '—')}</b></div>
-                        <div className='dtrader__spark'>
-                            {analysis.length > 1 ? <svg viewBox='0 0 100 30' preserveAspectRatio='none'><polyline fill='none' points={analysis.map((t, i) => `${i / (analysis.length - 1) * 100},${28 - ((t.quote - Math.min(...analysis.map(x => x.quote))) / Math.max(1e-9, Math.max(...analysis.map(x => x.quote)) - Math.min(...analysis.map(x => x.quote))) * 25)}`).join(' ')} /></svg> : <span>Waiting for live Deriv ticks…</span>}
-                        </div>
+                    <section className='dt-chart-card'>
+                        <div className='dt-chart-head'><div><small>LIVE MARKET</small><strong>{selectedMarket?.name || symbol}</strong></div><b>{livePrice(ticks, decimals)}</b></div>
+                        <div className='dt-chart'>{chartData.activeSymbols.length ? <SmartChart id={'sentinel-dtrader-' + symbol} key={'sentinel-dtrader-' + symbol} symbol={symbol} barriers={[]} chartType='line' granularity={0 as TGranularity} isLive isMobile={isMobile} isConnectionOpened={!!chart_api.api} getQuotes={getQuotes} subscribeQuotes={subscribeQuotes} unsubscribeQuotes={unsubscribeQuotes} chartData={{ activeSymbols: chartData.activeSymbols, tradingTimes: chartData.tradingTimes }} settings={chartSettings} topWidgets={() => <ChartTitle onChange={() => undefined} />} enabledNavigationWidget={isDesktop} enabledChartFooter={false} showLastDigitStats={false} /> : <div className='dt-chart-loading'>Connecting to live Deriv market data…</div>}</div>
                     </section>
 
                     <section className='dtrader__panel'>
@@ -278,7 +257,9 @@ export default function DTrader() {
             </div>
         </div>
     );
-}
+});
+
+function livePrice(ticks: Tick[], decimals: number) { const value = ticks.length ? ticks[ticks.length - 1].quote : null; return value == null ? '—' : value.toFixed(decimals); }
 
 function Metric({ l, v }: { l: string; v: string }) {
     return <div className='dtrader__metric'><small>{l}</small><b>{v}</b></div>;
