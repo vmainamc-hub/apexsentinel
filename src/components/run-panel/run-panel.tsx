@@ -71,9 +71,9 @@ const DrawerContent = ({ active_index, is_drawer_open, active_tour, setActiveTab
 };
 
 const DrawerFooter = ({ is_clear_stat_disabled, onClearStatClick }: TDrawerFooter) => <div className='run-panel__footer'><Button id='db-run-panel__clear-button' className='run-panel__footer-button' disabled={is_clear_stat_disabled} onClick={onClearStatClick} has_effect secondary><span><Localize i18n_default_text='Reset' /></span></Button></div>;
-const MobileDrawerFooter = () => {
+const MobileDrawerFooter = ({ show_run_panel }: { show_run_panel: boolean }) => {
     const { isDesktop, isTablet } = useDevice();
-    if (isDesktop && !isTablet) return null;
+    if ((isDesktop && !isTablet) || !show_run_panel) return null;
     const footer = <div className='controls__section controls__section--compact'><div className='controls__buttons'><TradeAnimation className='controls__animation' should_show_overlay /></div></div>;
     return typeof document === 'undefined' ? null : createPortal(footer, document.body);
 };
@@ -100,13 +100,13 @@ const RunPanel = observer(() => {
     const header = <DrawerHeader is_clear_stat_disabled={is_clear_stat_disabled} is_mobile={!is_desktop_layout} is_drawer_open={is_drawer_open} onClearStatClick={onClearStatClick} />;
     const show_run_panel = [BOT_BUILDER, CHART].includes(active_tab) || active_tour;
 
-    if (!show_run_panel && is_desktop_layout) return null;
+    if (!show_run_panel) return null;
 
     return <>
         <div className={!is_desktop_layout && is_drawer_open ? 'run-panel__container--mobile' : 'run-panel'}>
             <Drawer anchor='right' className={classNames('run-panel', { 'run-panel__container': is_desktop_layout, 'run-panel__container--tour-active': is_desktop_layout && active_tour })} contentClassName='run-panel__content' header={header} footer={is_desktop_layout && footer} is_open={is_drawer_open} toggleDrawer={toggleDrawer} width={366} zIndex={popover_zindex.RUN_PANEL}>{content}</Drawer>
         </div>
-        <MobileDrawerFooter />
+        <MobileDrawerFooter show_run_panel={show_run_panel} />
         <StatisticsInfoModal is_mobile={!is_desktop_layout} is_statistics_info_modal_open={is_statistics_info_modal_open} toggleStatisticsInfoModal={toggleStatisticsInfoModal} />
     </>;
 });
