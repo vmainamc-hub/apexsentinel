@@ -86,7 +86,16 @@ export default observer(function DTrader() {
     const total = Math.max(1, live1000.length);
     const evenPct = (evenCount / total) * 100;
     const oddPct = 100 - evenPct;
-    const last = live1000.length ? live1000[live1000.length - 1].digit : '—';
+    const last = live1000.length ? live1000[live1000.length - 1].digit : null;
+    const [pulseDigit, setPulseDigit] = useState<number | null>(null);
+    const pulseTimerRef = useRef<number>();
+    useEffect(() => {
+        if (last == null) return;
+        setPulseDigit(last);
+        window.clearTimeout(pulseTimerRef.current);
+        pulseTimerRef.current = window.setTimeout(() => setPulseDigit(null), 380);
+        return () => window.clearTimeout(pulseTimerRef.current);
+    }, [last, ticks.length]);
     const selectedMarket = markets.find(m => m.symbol === symbol);
     const decimals = selectedMarket?.pip_size ? Math.max(0, Math.round(-Math.log10(Number(selectedMarket.pip_size)))) : 2;
     // Keep digit formatting current without making the tick subscription restart when
@@ -269,8 +278,21 @@ export default observer(function DTrader() {
                     <section className='dtrader__panel'>
                         <div className='dtrader__panel-head'><strong>0–9 LIVE DIGIT INTELLIGENCE · DERIV 1000 TICKS</strong><div className='dtrader__window'>{[20,50,100,120,500,1000].map(n => <button key={n} className={windowSize === n ? 'active' : ''} onClick={() => setWindowSize(n)}>{n}</button>)}</div></div>
                         <div className='dtrader__note'>Distribution = last {live1000.length} of the canonical 1000-tick feed · analysis window = {analysis.length}</div>
-                        <div className='dtrader__digits'>{counts.map((c, d) => <div className='dtrader__digit' key={d}><b>{d}</b><i style={{ height: Math.max(4, c / total * 110) }} /><span>{(c / total * 100).toFixed(1)}%</span><small>{c}</small></div>)}</div>
-                        <div className='dtrader__metrics'><Metric l='EVEN' v={evenPct.toFixed(1) + '%'} /><Metric l='ODD' v={oddPct.toFixed(1) + '%'} /><Metric l='LAST' v={String(last)} /><Metric l='SAMPLE' v={live1000.length + ' / 1000'} /><Metric l='FEED' v={feedState} /></div>
+                        <div className='dtrader__digits' style={last != null ? ({ '--last-index': last } as React.CSSProperties) : undefined}>
+                            {counts.map((c, d) => {
+                                const pct = (c / total) * 100;
+                                return (
+                                    <div className={'dtrader__digit' + (d === last ? ' is-last' : '') + (d === pulseDigit ? ' is-pulse' : '')} key={d}>
+                                        <div className='dtrader__digit-ring' style={{ '--pct': pct } as React.CSSProperties}>
+                                            <div className='dtrader__digit-ring-inner'><b>{d}</b></div>
+                                        </div>
+                                        <span>{pct.toFixed(1)}%</span>
+                                    </div>
+                                );
+                            })}
+                            {last != null && <i className='dtrader__digit-marker' />}
+                        </div>
+                        <div className='dtrader__metrics'><Metric l='EVEN' v={evenPct.toFixed(1) + '%'} /><Metric l='ODD' v={oddPct.toFixed(1) + '%'} /><Metric l='LAST' v={last == null ? '—' : String(last)} /><Metric l='SAMPLE' v={live1000.length + ' / 1000'} /><Metric l='FEED' v={feedState} /></div>
                     </section>
 
                     <section className='dtrader__panel'>
