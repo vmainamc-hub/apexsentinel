@@ -84,6 +84,7 @@ export function createTransport(): TTransport {
                 }
                 subscriptions.delete(id);
             }
+            stopWatchingReconnects();
         },
     };
 }
