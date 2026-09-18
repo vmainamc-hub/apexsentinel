@@ -17,7 +17,7 @@
             top: 0;
             left: 0;
             width: 100vw;
-            z-index: 10001;
+            z-index: 9999;
             height: calc(100% - env(safe-area-inset-bottom, 0));
             padding-bottom: env(safe-area-inset-bottom, 0);
 
@@ -149,14 +149,15 @@
 
             &--mobile {
                 display: flex;
+                height: var(--drawer-content-height-mobile);
                 position: fixed;
-                top: 3.6rem;
-                bottom: calc(6.8rem + env(safe-area-inset-bottom, 0));
-                height: auto;
-                max-height: calc(100dvh - 10.4rem - env(safe-area-inset-bottom, 0));
+                bottom: 15.7rem;
                 width: 100vw;
                 padding: 0.4rem 0;
-                overflow: hidden;
+
+                @supports (-webkit-touch-callout: none) {
+                    bottom: calc(15.7rem + env(safe-area-inset-bottom, 0));
+                }
             }
 
             &--summary-tab { padding: 0.8rem 1.6rem; }
