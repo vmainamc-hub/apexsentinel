@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { ChartTitle, SmartChart, TGranularity } from '@deriv-com/smartcharts-champion';
 import { useDevice } from '@deriv-com/ui';
@@ -72,6 +72,12 @@ export default observer(function DTrader() {
     const last = live1000.length ? live1000[live1000.length - 1].digit : '—';
     const selectedMarket = markets.find(m => m.symbol === symbol);
     const decimals = selectedMarket?.pip_size ? Math.max(0, Math.round(-Math.log10(Number(selectedMarket.pip_size)))) : 2;
+    // Keep digit formatting current without making the tick subscription restart when
+    // market metadata updates pip_size after mount.
+    const decimalsRef = useRef(decimals);
+    useEffect(() => {
+        decimalsRef.current = decimals;
+    }, [decimals]);
 
     const psychology = useMemo(() => {
         const n = Math.min(1000, ticks.length);
@@ -108,13 +114,13 @@ export default observer(function DTrader() {
                 const response = await getQuotes({ symbol, granularity: 0, count: 1000 });
                 const prices = response?.history?.prices || [];
                 if (cancelled) return;
-                setTicks(prices.map((q: number) => ({ epoch: 0, quote: Number(q), digit: digitFromQuote(Number(q), decimals) })).slice(-1000));
+                setTicks(prices.map((q: number) => ({ epoch: 0, quote: Number(q), digit: digitFromQuote(Number(q), decimalsRef.current) })).slice(-1000));
                 setFeedState('LIVE');
                 unsubscribe = subscribeQuotes({ symbol, granularity: 0 }, (quote: any) => {
                     if (cancelled) return;
                     const price = Number(quote?.Close ?? quote?.quote ?? quote?.price);
                     if (!Number.isFinite(price)) return;
-                    setTicks(previous => [...previous, { epoch: Number(quote?.Date || Date.now() / 1000), quote: price, digit: digitFromQuote(price, decimals) }].slice(-1000));
+                    setTicks(previous => [...previous, { epoch: Number(quote?.Date || Date.now() / 1000), quote: price, digit: digitFromQuote(price, decimalsRef.current) }].slice(-1000));
                     setFeedState('LIVE');
                 });
             } catch {
@@ -126,7 +132,7 @@ export default observer(function DTrader() {
             try { unsubscribe?.(); } catch {}
             try { unsubscribeQuotes({ symbol, granularity: 0 }); } catch {}
         };
-    }, [symbol, decimals, getQuotes, subscribeQuotes, unsubscribeQuotes]);
+    }, [symbol, getQuotes, subscribeQuotes, unsubscribeQuotes]);
 
     useEffect(() => {
         if (!client?.is_logged_in || !chart_api.api?.send) {
