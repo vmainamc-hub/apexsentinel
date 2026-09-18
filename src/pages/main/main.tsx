@@ -78,7 +78,7 @@ const AppWrapper = observer(() => {
         [key: string]: string;
     };
     const { clear } = summary_card;
-    const { DASHBOARD, BOT_BUILDER, BOT_STORE, CHART, TUTORIAL } = DBOT_TABS;
+    const { DASHBOARD, BOT_BUILDER, BOT_STORE, DTRADER, CHART, TUTORIAL } = DBOT_TABS;
     const init_render = React.useRef(true);
     const hash = ['dashboard', 'bot_builder', 'bot_store', 'dtrader', 'chart', 'tutorial'];
     const { isDesktop, isTablet } = useDevice();
@@ -428,16 +428,16 @@ const AppWrapper = observer(() => {
                 </div>
             </div>
             <DesktopWrapper>
-                <div className='main__run-strategy-wrapper'>
-                    {!isTablet && <RunStrategy />}
-                    <RunPanel />
-                </div>
+                {active_tab !== DTRADER && (
+                    <div className='main__run-strategy-wrapper'>
+                        {!isTablet && <RunStrategy />}
+                        <RunPanel />
+                    </div>
+                )}
                 <ChartModal />
                 <TradingViewModal />
             </DesktopWrapper>
-            <MobileWrapper>
-                <RunPanel />
-            </MobileWrapper>
+            <MobileWrapper>{active_tab !== DTRADER && <RunPanel />}</MobileWrapper>
             <Dialog
                     title={title}
                     is_visible={is_dialog_open}
