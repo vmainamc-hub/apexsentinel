@@ -12,6 +12,7 @@ import {
 import { applyReact19DomPolyfills } from './utils/react19-dom-polyfills';
 import { performVersionCheck } from './utils/version-check';
 import './styles/index.scss';
+import '@deriv-com/smartcharts-champion/dist/smartcharts.css';
 
 applyReact19DomPolyfills();
 
