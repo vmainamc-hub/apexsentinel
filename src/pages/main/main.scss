@@ -49,6 +49,18 @@
             overflow: hidden;
         }
 
+        @include mobile-or-tablet-screen {
+            // The main viewport is intentionally fixed-height. Make the
+            // active tab area the vertical scroll owner on phones/tablets so
+            // Dashboard and Bot Store can be browsed beyond the first screen.
+            height: 100%;
+            min-height: 0;
+            overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
+        }
+
         &--active {
             // css for onboard tour overlay
             &:before {
