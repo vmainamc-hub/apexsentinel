@@ -48,6 +48,12 @@
 
         @include desktop-screen {
             height: 100%;
+
+            > div {
+                height: 100%;
+                min-height: 0;
+            }
+
             .dc-tabs { height: 100%; min-height: 0; }
             .dc-tabs__content { min-height: 0; height: 100%; overflow: hidden; }
         }
