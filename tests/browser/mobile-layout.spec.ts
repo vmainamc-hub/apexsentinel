@@ -134,6 +134,33 @@ test.describe('Apex Sentinel mobile/landscape UI regression', () => {
         }
     });
 
+    test('mobile Run panel handle opens and tabs remain tappable', async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.goto('/#bot_builder', { waitUntil: 'domcontentloaded' });
+
+        const botBuilderTab = page.locator('#id-bot-builder');
+        await botBuilderTab.waitFor({ state: 'attached', timeout: 15000 });
+        if (!(await botBuilderTab.evaluate(element => element.classList.contains('dc-tabs__active')).catch(() => false))) {
+            await botBuilderTab.click();
+        }
+        await page.locator('.bot-builder.bot-builder--active').waitFor({ state: 'visible', timeout: 15000 });
+
+        const drawerToggle = page.locator('.dc-drawer__toggle').first();
+        await drawerToggle.waitFor({ state: 'visible', timeout: 15000 });
+        await assertHitTarget(page, '.dc-drawer__toggle', 'Run panel drawer handle');
+        await drawerToggle.click();
+
+        await expect(page.locator('#db-run-panel-tab__summary')).toBeVisible({ timeout: 5000 });
+        await expect(page.locator('#db-run-panel__clear-button')).toBeVisible({ timeout: 5000 });
+
+        await page.locator('#db-run-panel-tab__transactions').click();
+        await expect(page.locator('#db-run-panel-tab__transactions')).toHaveClass(/dc-tabs__active/);
+        await page.locator('#db-run-panel-tab__journal').click();
+        await expect(page.locator('#db-run-panel-tab__journal')).toHaveClass(/dc-tabs__active/);
+
+        await assertNoOverflow(page, 'Run panel portrait navigation');
+    });
+
     test('landscape run panel geometry stays inside the viewport', async ({ page }) => {
         for (const viewport of [
             { width: 800, height: 360 },
