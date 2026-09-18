@@ -13,19 +13,6 @@ type ContractType =
     | 'CALL' | 'PUT' | 'DIGITEVEN' | 'DIGITODD' | 'DIGITOVER' | 'DIGITUNDER'
     | 'DIGITMATCH' | 'DIGITDIFF' | 'HIGHER' | 'LOWER' | 'TOUCH' | 'NOTOUCH';
 
-const FALLBACK_MARKETS = [
-    ['1HZ10V', 'Volatility 10 (1s) Index'],
-    ['1HZ25V', 'Volatility 25 (1s) Index'],
-    ['1HZ50V', 'Volatility 50 (1s) Index'],
-    ['1HZ75V', 'Volatility 75 (1s) Index'],
-    ['1HZ100V', 'Volatility 100 (1s) Index'],
-    ['R_10', 'Volatility 10 Index'],
-    ['R_25', 'Volatility 25 Index'],
-    ['R_50', 'Volatility 50 Index'],
-    ['R_75', 'Volatility 75 Index'],
-    ['R_100', 'Volatility 100 Index'],
-] as const;
-
 const CONTRACTS: { id: ContractType; label: string }[] = [
     { id: 'CALL', label: 'Rise' }, { id: 'PUT', label: 'Fall' },
     { id: 'DIGITEVEN', label: 'Even' }, { id: 'DIGITODD', label: 'Odd' },
@@ -60,7 +47,7 @@ export default observer(function DTrader() {
     const { isDesktop, isMobile } = useDevice();
     const { adapterInitialized, chartData, getQuotes, subscribeQuotes, unsubscribeQuotes, error: chartError } = useSmartChartAdaptor();
     const [symbol, setSymbol] = useState('1HZ10V');
-    const [markets, setMarkets] = useState<any[]>(FALLBACK_MARKETS.map(([symbol, name]) => ({ symbol, name, market: 'synthetic_index', pip_size: 0.01 })));
+    const [markets, setMarkets] = useState<any[]>([]);
     const [marketOpen, setMarketOpen] = useState(false);
     const [ticks, setTicks] = useState<Tick[]>([]);
     const [type, setType] = useState<ContractType>('DIGITUNDER');
@@ -83,7 +70,7 @@ export default observer(function DTrader() {
     const evenPct = live1000.filter(t => t.digit % 2 === 0).length / total * 100;
     const oddPct = 100 - evenPct;
     const last = live1000.length ? live1000[live1000.length - 1].digit : '—';
-    const selectedMarket = markets.find(m => m.symbol === symbol) || markets[0];
+    const selectedMarket = markets.find(m => m.symbol === symbol);
     const decimals = selectedMarket?.pip_size ? Math.max(0, Math.round(-Math.log10(Number(selectedMarket.pip_size)))) : 2;
 
     const psychology = useMemo(() => {
@@ -106,7 +93,10 @@ export default observer(function DTrader() {
             market: String(m.market || 'synthetic_index'),
             pip_size: Number(m.pip_size || m.pip || 0.01),
         })).filter((m: any) => m.symbol);
-        if (live.length) setMarkets(live);
+        if (live.length) {
+            setMarkets(live);
+            if (!live.some(m => m.symbol === symbol)) setSymbol(live[0].symbol);
+        }
     }, [chartData.activeSymbols]);
 
     useEffect(() => {
@@ -225,8 +215,8 @@ export default observer(function DTrader() {
             <div className='dt-header'>
                 <div className='dt-brand'><div><strong>DTrader</strong><span>Live Deriv trading terminal</span></div></div>
                 <div className='dt-market-picker-wrap'>
-                    <button className='dt-market-picker' onClick={() => setMarketOpen(v => !v)}><b>{symbol}</b><span>{selectedMarket?.name || symbol}</span><em>⌄</em></button>
-                    {marketOpen && <div className='dt-market-menu'><div className='dt-search'><input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder='Search synthetic / derived markets…' /><button onClick={() => setMarketOpen(false)}>×</button></div><div className='dt-market-list'>{filteredMarkets.slice(0, 80).map(m => <button key={m.symbol} className={m.symbol === symbol ? 'selected' : ''} onClick={() => { setSymbol(m.symbol); setMarketOpen(false); setSearch(''); }}><strong>{m.symbol}</strong><span>{m.name}</span></button>)}</div></div>}
+                    <button className='dt-market-picker' disabled={!markets.length} onClick={() => setMarketOpen(v => !v)}><b>{symbol}</b><span>{selectedMarket?.name || (markets.length ? 'Loading market…' : 'Waiting for live markets…')}</span><em>⌄</em></button>
+                    {marketOpen && markets.length > 0 && <div className='dt-market-menu'><div className='dt-search'><input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder='Search synthetic / derived markets…' /><button onClick={() => setMarketOpen(false)}>×</button></div><div className='dt-market-list'>{filteredMarkets.slice(0, 80).map(m => <button key={m.symbol} className={m.symbol === symbol ? 'selected' : ''} onClick={() => { setSymbol(m.symbol); setMarketOpen(false); setSearch(''); }}><strong>{m.symbol}</strong><span>{m.name}</span></button>)}</div></div>}
                 </div>
                 <div className='dt-header-status'><i className={feedState.toLowerCase()} />{feedState}<span>{client?.loginid || 'Demo account'}</span></div>
             </div>

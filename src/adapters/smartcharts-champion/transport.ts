@@ -1,154 +1,85 @@
 /**
- * Transport layer wrapper for SmartCharts Champion Adapter
- * Wraps the existing chart_api.api to match the TTransport interface
+ * Transport wrapper around Apex Sentinel's single shared Deriv API instance.
+ * This layer never initializes or creates a WebSocket.
  */
-
 import chart_api from '@/external/bot-skeleton/services/api/chart-api';
 import type { TTransport } from './types';
 
-// Logger utility for transport layer
-const logger = {
-    log: () => {}, // Disabled in production
-    warn: console.warn.bind(console, '[SmartCharts Transport]'),
-    error: console.error.bind(console, '[SmartCharts Transport]'),
-};
-
-/**
- * Create transport wrapper around chart_api.api
- * @returns TTransport implementation
- */
 export function createTransport(): TTransport {
-    const subscriptions = new Map<string, any>();
+    const subscriptions = new Map<string, {
+        request: any;
+        callback: (response: any) => void;
+        messageSubscription?: { unsubscribe: () => void };
+        realSubscriptionId: string | null;
+    }>();
+
+    const requireApi = () => {
+        if (!chart_api.api?.send) throw new Error('Shared Deriv connection is not ready');
+        return chart_api.api;
+    };
 
     return {
-        /**
-         * Send one-shot API request
-         */
         async send(request: any): Promise<any> {
-            if (!chart_api.api) {
-                await chart_api.init();
-            }
-            return chart_api.api.send(request);
+            return requireApi().send(request);
         },
 
-        /**
-         * Subscribe to streaming data
-         * @param request - API request with subscribe: 1
-         * @param callback - Callback for streaming updates
-         * @returns subscription ID
-         */
         subscribe(request: any, callback: (response: any) => void): string {
-            if (!chart_api.api) {
-                throw new Error('Chart API not initialized');
-            }
-            // Generate a unique temporary ID for tracking
-            const tempId = `temp-${Date.now()}-${Math.random()}`;
-
-            // Send initial subscription request
+            const api = requireApi();
+            const tempId = `smartchart-${Date.now()}-${Math.random().toString(36).slice(2)}`;
             const subscribeRequest = { ...request, subscribe: 1 };
 
-            // Set up global message listener first (before sending request)
-            const messageSubscription = chart_api.api.onMessage()?.subscribe(({ data }: { data: any }) => {
+            const messageSubscription = api.onMessage()?.subscribe(({ data }: { data: any }) => {
+                const stored = subscriptions.get(tempId);
                 const subscriptionId = data?.subscription?.id;
-
-                // Check if this message belongs to our subscription
-                const storedSub = subscriptions.get(tempId);
-                if (storedSub && subscriptionId) {
-                    // Update the subscription with the real ID
-                    if (!storedSub.realSubscriptionId) {
-                        storedSub.realSubscriptionId = subscriptionId;
-                        subscriptions.set(tempId, storedSub);
-                    }
-
-                    // Forward the message if it matches our subscription
-                    if (subscriptionId === storedSub.realSubscriptionId) {
-                        callback(data);
-                    }
-                }
+                if (!stored || !subscriptionId || subscriptionId !== stored.realSubscriptionId) return;
+                callback(data);
             });
 
-            // Store subscription info with temp ID
             subscriptions.set(tempId, {
                 request: subscribeRequest,
                 callback,
                 messageSubscription,
-                realSubscriptionId: null, // Will be set when we get the first response
+                realSubscriptionId: null,
             });
 
-            // Send the subscription request
-            chart_api.api
-                .send(subscribeRequest)
+            api.send(subscribeRequest)
                 .then((response: any) => {
+                    const stored = subscriptions.get(tempId);
+                    if (!stored) return;
                     const subscriptionId = response?.subscription?.id;
-
-                    if (subscriptionId) {
-                        // Update stored subscription with real ID
-                        const storedSub = subscriptions.get(tempId);
-                        if (storedSub) {
-                            storedSub.realSubscriptionId = subscriptionId;
-                            subscriptions.set(tempId, storedSub);
-                        }
-
-                        // Call callback with initial response
-                        callback(response);
-                    } else {
-                        logger.error('No subscription ID in response:', response);
-                    }
+                    if (!subscriptionId) throw new Error('Deriv did not return a subscription ID');
+                    stored.realSubscriptionId = subscriptionId;
+                    subscriptions.set(tempId, stored);
+                    callback(response);
                 })
-                .catch((error: any) => {
-                    logger.error('Subscription failed:', error);
-                    // Clean up failed subscription
-                    const storedSub = subscriptions.get(tempId);
-                    if (storedSub?.messageSubscription) {
-                        storedSub.messageSubscription.unsubscribe();
-                    }
+                .catch(error => {
+                    subscriptions.get(tempId)?.messageSubscription?.unsubscribe();
                     subscriptions.delete(tempId);
+                    console.error('[SmartCharts Transport] Subscription failed:', error);
                 });
 
             return tempId;
         },
 
-        /**
-         * Unsubscribe from streaming data
-         * @param subscriptionId - Subscription ID to cancel (temp ID)
-         */
         unsubscribe(subscriptionId: string): void {
             const subscription = subscriptions.get(subscriptionId);
+            if (!subscription) return;
 
-            if (subscription) {
-                // Cancel RxJS subscription
-                if (subscription.messageSubscription) {
-                    subscription.messageSubscription.unsubscribe();
-                }
+            subscription.messageSubscription?.unsubscribe();
+            if (chart_api.api && subscription.realSubscriptionId) {
+                chart_api.api.forget(subscription.realSubscriptionId);
+            }
+            subscriptions.delete(subscriptionId);
+        },
 
-                // Send forget request to server using the real subscription ID
+        unsubscribeAll(): void {
+            for (const [id, subscription] of subscriptions) {
+                subscription.messageSubscription?.unsubscribe();
                 if (chart_api.api && subscription.realSubscriptionId) {
                     chart_api.api.forget(subscription.realSubscriptionId);
                 }
-
-                // Clean up local storage
-                subscriptions.delete(subscriptionId);
-            } else {
-                logger.warn('No subscription found for ID:', subscriptionId);
+                subscriptions.delete(id);
             }
-        },
-
-        /**
-         * Unsubscribe from all streaming data of a specific type
-         * @param msgType - Message type to unsubscribe from (optional)
-         */
-        unsubscribeAll(msgType?: string): void {
-            if (chart_api.api) {
-                if (msgType) {
-                    chart_api.api.forgetAll(msgType);
-                } else {
-                    // Forget all ticks by default
-                    chart_api.api.forgetAll('ticks');
-                }
-            }
-
-            // Clean up local subscriptions
-            subscriptions.clear();
         },
     };
 }

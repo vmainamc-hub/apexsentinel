@@ -63,7 +63,6 @@ export const useSmartChartAdaptor = (): UseSmartChartAdaptorReturn => {
     const isMountedRef = useRef(true);
     const cleanupFunctionsRef = useRef<Array<() => void>>([]);
     const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Ref to store timeout for cleanup
-    const initTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Track mounted state
     useEffect(() => {
@@ -79,22 +78,34 @@ export const useSmartChartAdaptor = (): UseSmartChartAdaptorReturn => {
         };
     }, []);
 
-    // DTrader must consume the app's already-initialized shared Deriv API.
-    // It must never create a second WebSocket/session just for SmartChart.
+    // Bind to the existing Apex Sentinel connection, including when DTrader mounts
+    // before APIBase has finished initializing. Never create a second WebSocket.
     useEffect(() => {
-        if (!chart_api.api) return;
-        const transport = createTransport();
-        const services = createServices();
-        const championAdapter = buildSmartchartsChampionAdapter(transport, services, {
-            debug: true,
-            subscriptionTimeout: 30000,
-        });
-        if (isMountedRef.current) {
-            setAdapter(championAdapter);
-            setAdapterInitialized(true);
-            setError(null);
-            setIsLoading(false);
-        }
+        let cancelled = false;
+        const initialize = () => {
+            if (cancelled || !isMountedRef.current || !chart_api.api) return;
+            try {
+                const transport = createTransport();
+                const services = createServices();
+                const championAdapter = buildSmartchartsChampionAdapter(transport, services, {
+                    debug: false,
+                    subscriptionTimeout: 30000,
+                });
+                setAdapter(championAdapter);
+                setAdapterInitialized(true);
+                setError(null);
+                setIsLoading(false);
+            } catch (err) {
+                setError(err instanceof Error ? err : new Error('SmartChart initialization failed'));
+                setIsLoading(false);
+            }
+        };
+        const unsubscribe = chart_api.onReady(initialize);
+        initialize();
+        return () => {
+            cancelled = true;
+            unsubscribe();
+        };
     }, []);
 
     // Load chart data when adapter is initialized
@@ -286,17 +297,11 @@ export const useSmartChartAdaptor = (): UseSmartChartAdaptorReturn => {
             });
             cleanupFunctionsRef.current = [];
 
-            // Unsubscribe from all ticks
-            try {
-                chart_api.api?.forgetAll('ticks');
-            } catch (err) {
-                logger.error('Error forgetting ticks:', err);
-            }
-
-            // Clean up adapter subscriptions
+            // Clean up only subscriptions owned by this SmartChart adapter.
+            // Never call forgetAll('ticks') because the shared socket is also used by Sentinel.
             if (adapter?.transport) {
                 try {
-                    adapter.transport.unsubscribeAll('ticks');
+                    adapter.transport.unsubscribeAll();
                 } catch (err) {
                     logger.error('Error unsubscribing from adapter:', err);
                 }
@@ -306,10 +311,6 @@ export const useSmartChartAdaptor = (): UseSmartChartAdaptorReturn => {
             if (retryTimeoutRef.current) {
                 clearTimeout(retryTimeoutRef.current);
                 retryTimeoutRef.current = null;
-            }
-            if (initTimeoutRef.current) {
-                clearTimeout(initTimeoutRef.current);
-                initTimeoutRef.current = null;
             }
         };
     }, [adapter]);

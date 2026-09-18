@@ -173,6 +173,7 @@ class APIBase {
             }
 
             this.api = await generateDerivApiInstance();
+            chart_api.setApi(this.api);
 
             this.api?.connection.addEventListener('open', this.socketOpenHandler);
             this.api?.connection.addEventListener('close', this.socketCloseHandler);
@@ -197,7 +198,7 @@ class APIBase {
         if (this.time_interval) clearInterval(this.time_interval);
         this.time_interval = null;
 
-        chart_api.init(force_create_connection);
+        chart_api.setApi(this.api);
     }
 
     getConnectionStatus() {
@@ -221,11 +222,13 @@ class APIBase {
         }
 
         if (this.api?.connection) {
+            chart_api.dispose();
             this.api.connection.removeEventListener('open', this.socketOpenHandler);
             this.api.connection.removeEventListener('close', this.socketCloseHandler);
             this.api.disconnect();
         }
 
+        chart_api.dispose();
         this.reconnect_in_progress = false;
     }
 

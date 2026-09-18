@@ -4,6 +4,7 @@
  */
 
 import ApiHelpers from '@/external/bot-skeleton/services/api/api-helpers';
+import { api_base } from '@/external/bot-skeleton/services/api/api-base';
 import type { TServices } from './types';
 
 // Logger utility for services layer
@@ -149,14 +150,17 @@ export function createServices(): TServices {
          */
         async getActiveSymbols(): Promise<any> {
             try {
-                const apiHelpers = ApiHelpers.instance as any;
-
-                if (!isApiHelpersInitialized(apiHelpers)) {
-                    throw new Error('ApiHelpers not initialized or active_symbols not available');
+                if (Array.isArray(api_base.active_symbols) && api_base.active_symbols.length) {
+                    return api_base.active_symbols;
                 }
 
-                // Retrieve active symbols using the existing service
-                const activeSymbols = await apiHelpers.active_symbols.retrieveActiveSymbols();
+                if (api_base.active_symbols_promise) {
+                    await api_base.active_symbols_promise;
+                } else if (api_base.api) {
+                    await api_base.getActiveSymbols();
+                }
+
+                const activeSymbols = api_base.active_symbols;
 
                 // Convert the processed symbols back to array format for the adapter
                 if (!Array.isArray(activeSymbols)) {
