@@ -184,7 +184,7 @@ export const loadXmlIntoDBot = async (bot: StoredBot): Promise<BotValidation> =>
 export const openDTrader = (symbol?: string): void => {
     const hash = '#dtrader';
     const url = symbol
-        ? `/${hash}?symbol=${encodeURIComponent(symbol)}`
+        ? `/?symbol=${encodeURIComponent(symbol)}${hash}`
         : `/${hash}`;
     window.location.assign(url);
 };
