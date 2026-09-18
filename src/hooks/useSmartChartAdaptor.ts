@@ -63,6 +63,7 @@ export const useSmartChartAdaptor = (): UseSmartChartAdaptorReturn => {
     const isMountedRef = useRef(true);
     const cleanupFunctionsRef = useRef<Array<() => void>>([]);
     const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Ref to store timeout for cleanup
+    const initTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Track mounted state
     useEffect(() => {
@@ -86,7 +87,15 @@ export const useSmartChartAdaptor = (): UseSmartChartAdaptorReturn => {
         let cancelled = false;
         const initialize = async () => {
             try {
-                if (!chart_api.api) await chart_api.init();
+                if (!chart_api.api) {
+                    await Promise.race([
+                        chart_api.init(),
+                        new Promise((_, reject) => {
+                            initTimeoutRef.current = setTimeout(() => reject(new Error('Deriv chart connection timed out')), 12000);
+                        }),
+                    ]);
+                    if (initTimeoutRef.current) { clearTimeout(initTimeoutRef.current); initTimeoutRef.current = null; }
+                }
                 if (cancelled || !chart_api.api) return;
                 const transport = createTransport();
                 const services = createServices();
@@ -118,7 +127,7 @@ export const useSmartChartAdaptor = (): UseSmartChartAdaptorReturn => {
 
         let cancelled = false;
 
-        const loadChartData = async (retryCount = 0, maxRetries = 10, delayMs = 200) => {
+        const loadChartData = async (retryCount = 0, maxRetries = 18, delayMs = 500) => {
             try {
                 setIsLoading(true);
                 const data = await adapter.getChartData();
@@ -321,6 +330,10 @@ export const useSmartChartAdaptor = (): UseSmartChartAdaptorReturn => {
             if (retryTimeoutRef.current) {
                 clearTimeout(retryTimeoutRef.current);
                 retryTimeoutRef.current = null;
+            }
+            if (initTimeoutRef.current) {
+                clearTimeout(initTimeoutRef.current);
+                initTimeoutRef.current = null;
             }
         };
     }, [adapter]);
