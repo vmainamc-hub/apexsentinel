@@ -112,6 +112,7 @@ export default class RunPanelStore {
 
     run_id = '';
     onOkButtonClick: (() => void) | null = null;
+    bot_listeners_registered = false;
     onCancelButtonClick: (() => void) | null = null;
 
     // when error happens, if it is unrecoverable_errors we reset run-panel
@@ -286,6 +287,8 @@ export default class RunPanelStore {
     clearStat = () => {
         const { summary_card, journal, transactions } = this.root_store;
 
+        // Reset is a hard history boundary: stop all bot event writers before clearing state.
+        this.unregisterBotListeners();
         this.setIsRunning(false);
         this.setHasOpenContract(false);
         this.clear();
@@ -439,6 +442,8 @@ export default class RunPanelStore {
     };
 
     registerBotListeners = () => {
+        if (this.bot_listeners_registered) return;
+
         const { summary_card, transactions } = this.root_store;
 
         observer.register('bot.running', this.onBotRunningEvent);
@@ -454,6 +459,7 @@ export default class RunPanelStore {
         observer.register('bot.stop_button_click', this.onStopBotClick);
         observer.register('Error', this.onError);
         observer.register('bot.setPurchaseInProgress', this.SetpurchaseInProgress);
+        this.bot_listeners_registered = true;
     };
 
     SetpurchaseInProgress = () => {
@@ -560,6 +566,10 @@ export default class RunPanelStore {
             this.is_sell_requested = false;
             this.setContractStage(contract_stages.CONTRACT_CLOSED);
             ui.setAccountSwitcherDisabledMessage();
+            this.unregisterBotListeners();
+        } else {
+            // Natural completion can arrive after the contract flag has already cleared.
+            this.setIsRunning(false);
             this.unregisterBotListeners();
         }
 
@@ -740,6 +750,7 @@ export default class RunPanelStore {
     };
 
     unregisterBotListeners = () => {
+        this.bot_listeners_registered = false;
         observer.unregisterAll('bot.running');
         observer.unregisterAll('bot.stop');
         observer.unregisterAll('bot.click_stop');
@@ -747,6 +758,7 @@ export default class RunPanelStore {
         observer.unregisterAll('bot.trade_again');
         observer.unregisterAll('contract.status');
         observer.unregisterAll('bot.contract');
+        observer.unregisterAll('bot.bot_ready');
         observer.unregisterAll('Error');
         observer.unregisterAll('bot.setPurchaseInProgress');
     };
