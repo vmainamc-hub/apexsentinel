@@ -6,9 +6,9 @@ async function collectRunDiagnostic(page: import('@playwright/test').Page, width
     const botBuilder = page.locator('.bot-builder.bot-builder--active');
     const botBuilderTab = page.locator('#id-bot-builder');
     if (await botBuilder.count() === 0) {
-        await botBuilderTab.waitFor({ state: 'visible', timeout: 20000 });
+        await botBuilderTab.waitFor({ state: 'attached', timeout: 20000 });
         if (!(await botBuilderTab.evaluate(element => element.classList.contains('dc-tabs__active')).catch(() => false))) {
-            await botBuilderTab.click();
+            await botBuilderTab.click({ force: true });
         }
     }
     await botBuilder.waitFor({ state: 'visible', timeout: 20000 });
