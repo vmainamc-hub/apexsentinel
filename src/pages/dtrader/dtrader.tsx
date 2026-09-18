@@ -79,7 +79,7 @@ export default function DTrader() {
     const total = Math.max(1, live1000.length);
     const evenPct = live1000.filter(t => t.digit % 2 === 0).length / total * 100;
     const oddPct = 100 - evenPct;
-    const last = live1000.at(-1)?.digit ?? '—';
+    const last = live1000.length ? live1000[live1000.length - 1].digit : '—';
 
     const psychology = useMemo(() => {
         const n = Math.min(1000, ticks.length);
@@ -97,7 +97,7 @@ export default function DTrader() {
         let cancelled = false;
         (async () => {
             try {
-                const res = await api_base.api?.send?.({ active_symbols: 'brief' });
+                const res = await (api_base.api as any)?.send?.({ active_symbols: 'brief' });
                 const rows = Array.isArray(res?.active_symbols) ? res.active_symbols : [];
                 const live = rows
                     .filter((m: any) => {
@@ -176,7 +176,7 @@ export default function DTrader() {
                     underlying_symbol: symbol,
                 };
                 if (['DIGITOVER','DIGITUNDER','DIGITMATCH','DIGITDIFF','HIGHER','LOWER','TOUCH','NOTOUCH'].includes(type)) payload.barrier = barrier;
-                const res = await api_base.api.send(payload);
+                const res = await (api_base.api as any).send(payload);
                 if (!cancelled) setProposal(res?.proposal || null);
             } catch (e: any) {
                 if (!cancelled) { setProposal(null); setMessage(e?.message || 'Proposal request failed'); }
@@ -191,7 +191,7 @@ export default function DTrader() {
         if (!openContract?.id || !api_base.api?.send) return;
         const timer = window.setInterval(async () => {
             try {
-                const res = await api_base.api.send({ proposal_open_contract: 1, contract_id: openContract.id });
+                const res = await (api_base.api as any).send({ proposal_open_contract: 1, contract_id: openContract.id });
                 const c = res?.proposal_open_contract;
                 if (!c) return;
                 setOpenContract((p: any) => p ? { ...p, status: c.status, profit: Number(c.profit || 0), bid: Number(c.bid_price || 0), payout: Number(c.payout || 0) } : p);
@@ -204,7 +204,7 @@ export default function DTrader() {
     async function buy() {
         if (!proposal?.id || !client?.is_logged_in) { setMessage('Log in to your Deriv account before buying.'); return; }
         try {
-            const res = await api_base.api.send({ buy: proposal.id, price: Number(proposal.ask_price) });
+            const res = await (api_base.api as any).send({ buy: proposal.id, price: Number(proposal.ask_price) });
             const id = Number(res?.buy?.contract_id);
             if (!id) throw new Error(res?.error?.message || 'Deriv did not return a contract ID.');
             setOpenContract({ id, label: labelFor(type, barrier), status: 'open', profit: 0, bid: Number(proposal.ask_price) });
@@ -217,7 +217,7 @@ export default function DTrader() {
     async function sell() {
         if (!openContract?.id) return;
         try {
-            await api_base.api.send({ sell: openContract.id, price: 0 });
+            await (api_base.api as any).send({ sell: openContract.id, price: 0 });
             setMessage('Sell request sent for contract ' + openContract.id);
         } catch (e: any) { setMessage(e?.message || 'Sell request failed.'); }
     }
@@ -242,7 +242,7 @@ export default function DTrader() {
             <div className='dtrader__grid'>
                 <main>
                     <section className='dtrader__panel dtrader__chart'>
-                        <div className='dtrader__panel-head'><span>{markets.find(m => m.symbol === symbol)?.name || symbol}</span><b>{ticks.at(-1)?.quote?.toFixed(5) || '—'}</b></div>
+                        <div className='dtrader__panel-head'><span>{markets.find(m => m.symbol === symbol)?.name || symbol}</span><b>{(ticks.length ? ticks[ticks.length - 1].quote.toFixed(5) : '—')}</b></div>
                         <div className='dtrader__spark'>
                             {analysis.length > 1 ? <svg viewBox='0 0 100 30' preserveAspectRatio='none'><polyline fill='none' points={analysis.map((t, i) => `${i / (analysis.length - 1) * 100},${28 - ((t.quote - Math.min(...analysis.map(x => x.quote))) / Math.max(1e-9, Math.max(...analysis.map(x => x.quote)) - Math.min(...analysis.map(x => x.quote))) * 25)}`).join(' ')} /></svg> : <span>Waiting for live Deriv ticks…</span>}
                         </div>
