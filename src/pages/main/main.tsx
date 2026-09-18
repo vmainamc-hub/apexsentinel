@@ -371,11 +371,8 @@ const AppWrapper = observer(() => {
                             >
                                 <BotStore />
                             </div>
-                            <div
-                                label='DTrader'
-                                id='id-dtrader'
-                            >
-                                <DTrader />
+                            <div label='DTrader' id='id-dtrader'>
+                                {active_tab === DTRADER ? <DTrader /> : null}
                             </div>
                             <div
                                 label={
