@@ -177,12 +177,29 @@ export default class TransactionsStore {
     }
 
     clear() {
-        if (this.elements && this.elements[this.core?.client?.loginid as string]?.length > 0) {
-            this.elements[this.core?.client?.loginid as string] = [];
-        }
-        this.recovered_completed_transactions = this.recovered_completed_transactions?.slice(0, 0);
-        this.recovered_transactions = this.recovered_transactions?.slice(0, 0);
+        const current_account = this.core?.client?.loginid as string;
+
+        // Reset the account's complete transaction history immutably.
+        // Mutating the nested array in place leaves the MobX reaction watching
+        // this.elements[loginid] with the same array reference, so session
+        // storage could retain the old history and restore it on the next run.
+        this.elements = {
+            ...this.elements,
+            ...(current_account ? { [current_account]: [] } : {}),
+        };
+
+        this.recovered_completed_transactions = [];
+        this.recovered_transactions = [];
+        this.active_transaction_id = null;
+        this.is_called_proposal_open_contract = false;
         this.is_transaction_details_modal_open = false;
+
+        // Persist the empty history immediately as well as through the reaction.
+        const stored_transactions = getStoredItemsByKey(this.TRANSACTION_CACHE, {});
+        if (current_account) {
+            stored_transactions[current_account] = [];
+            setStoredItemsByKey(this.TRANSACTION_CACHE, stored_transactions);
+        }
     }
 
     registerReactions() {
