@@ -78,10 +78,16 @@ export const useSmartChartAdaptor = (): UseSmartChartAdaptorReturn => {
         };
     }, []);
 
-    // Initialize adapter - runs once when chart_api.api is available
+    // Initialize the shared chart API first, then build the SmartCharts adapter.
+    // The previous implementation only initialized when chart_api.api already
+    // existed on the first render, which could leave DTrader permanently static.
     useEffect(() => {
-        if (!adapterInitialized && chart_api.api) {
+        if (adapterInitialized) return;
+        let cancelled = false;
+        const initialize = async () => {
             try {
+                if (!chart_api.api) await chart_api.init();
+                if (cancelled || !chart_api.api) return;
                 const transport = createTransport();
                 const services = createServices();
                 const championAdapter = buildSmartchartsChampionAdapter(transport, services, {
@@ -89,10 +95,11 @@ export const useSmartChartAdaptor = (): UseSmartChartAdaptorReturn => {
                     subscriptionTimeout: 30000,
                 });
 
-                if (isMountedRef.current) {
+                if (isMountedRef.current && !cancelled) {
                     setAdapter(championAdapter);
                     setAdapterInitialized(true);
                     setError(null);
+                    setIsLoading(false);
                 }
             } catch (err) {
                 if (isMountedRef.current) {
@@ -100,7 +107,9 @@ export const useSmartChartAdaptor = (): UseSmartChartAdaptorReturn => {
                     setIsLoading(false);
                 }
             }
-        }
+        };
+        initialize();
+        return () => { cancelled = true; };
     }, [adapterInitialized]);
 
     // Load chart data when adapter is initialized
