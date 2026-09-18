@@ -154,6 +154,12 @@ test.describe('Apex Sentinel mobile/landscape UI regression', () => {
             }
         }
 
+        const tourLayer = page.locator('.dc-dialog__wrapper.tour-dialog').first();
+        if (await tourLayer.count() > 0 && await tourLayer.isVisible().catch(() => false)) {
+            const tourZ = await tourLayer.evaluate(el => Number.parseInt(getComputedStyle(el).zIndex || '0', 10));
+            expect(tourZ, 'Onboarding tour must not outrank mobile Run controls').toBeLessThan(10000);
+        }
+
         const drawerToggle = page.locator('.dc-drawer__toggle').first();
         await drawerToggle.waitFor({ state: 'visible', timeout: 15000 });
         await assertHitTarget(page, '.dc-drawer__toggle', 'Run panel drawer handle');
