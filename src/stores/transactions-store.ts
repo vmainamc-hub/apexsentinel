@@ -6,7 +6,7 @@ import { ProposalOpenContract } from '@deriv/api-types';
 import { TPortfolioPosition, TStores } from '@deriv/stores/types';
 import { TContractInfo } from '../components/summary/summary-card.types';
 import { transaction_elements } from '../constants/transactions';
-import { getStoredItemsByKey, getStoredItemsByUser, setStoredItemsByKey } from '../utils/session-storage';
+import { getStoredItemsByKey, setStoredItemsByKey } from '../utils/session-storage';
 import RootStore from './root-store';
 
 type TTransaction = {
@@ -49,7 +49,7 @@ export default class TransactionsStore {
     }
     TRANSACTION_CACHE = 'transaction_cache';
 
-    elements: TElement = getStoredItemsByUser(this.TRANSACTION_CACHE, this.core?.client?.loginid, []);
+    elements: TElement = getStoredItemsByKey(this.TRANSACTION_CACHE, {});
     active_transaction_id: null | number = null;
     recovered_completed_transactions: number[] = [];
     recovered_transactions: number[] = [];
