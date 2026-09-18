@@ -90,9 +90,12 @@
         &__container { height: 100%; }
     }
 
-    // The closed drawer is already positioned from 5.2rem to the bottom of the
-    // landscape viewport. Do not translate it farther down: that makes its box
-    // extend below the viewport and cover the fixed run controls.
+    // In landscape the sheet sits above the fixed Run/Stop footer as well.
+    // Leave its grab handle visible without placing the sheet over the controls.
+    .dc-drawer {
+        transform: translateY(calc(100% - 9.2rem));
+    }
+
     .dc-drawer--open {
         transform: translateY(0) !important;
     }
