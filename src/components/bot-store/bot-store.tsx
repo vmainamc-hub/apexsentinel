@@ -149,20 +149,14 @@ const BotStore = () => {
         setBusyId(bot.id);
         setMessage('');
 
-        const dtraderWindow = window.open('about:blank', '_blank');
-
         try {
-            const validation = await loadBot(bot, dtraderWindow);
+            const validation = await loadBot(bot);
             setSelectedId(bot.id);
             setMessage(`${bot.name} loaded into DBot${bot.symbol ? ` and DTrader (${bot.symbol})` : ' successfully. DTrader symbol is not configured for this bot.'}`);
-            if (!bot.symbol && dtraderWindow && !dtraderWindow.closed) {
-                dtraderWindow.close();
-            }
             if (validation.warnings.length > 0) {
                 setMessage(`${bot.name} loaded into DBot. ${validation.warnings[0]}`);
             }
         } catch (error) {
-            if (dtraderWindow && !dtraderWindow.closed) dtraderWindow.close();
             setMessage(error instanceof Error ? error.message : 'Unable to load this bot into DBot.');
         } finally {
             setBusyId(null);
