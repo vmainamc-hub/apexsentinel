@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import { ChartTitle, SmartChart, TGranularity } from '@deriv-com/smartcharts-champion';
+import { SmartChart, TGranularity } from '@deriv-com/smartcharts-champion';
 import { useDevice } from '@deriv-com/ui';
 import { useSmartChartAdaptor } from '@/hooks/useSmartChartAdaptor';
 import { generateOAuthURL } from '@/components/shared';
@@ -231,7 +231,7 @@ export default observer(function DTrader() {
                 <main>
                     <section className='dt-chart-card'>
                         <div className='dt-chart-head'><div><small>LIVE MARKET</small><strong>{selectedMarket?.name || symbol}</strong></div><b>{livePrice(ticks, decimals)}</b></div>
-                        <div className='dt-chart'>{adapterInitialized && chartData.activeSymbols.length ? <SmartChart id={'sentinel-dtrader-' + symbol} key={'sentinel-dtrader-' + symbol} symbol={symbol} barriers={[]} chartType='line' granularity={0 as TGranularity} isLive isMobile={isMobile} isConnectionOpened={!!chart_api.api} getQuotes={getQuotes} subscribeQuotes={subscribeQuotes} unsubscribeQuotes={unsubscribeQuotes} chartData={{ activeSymbols: chartData.activeSymbols, tradingTimes: chartData.tradingTimes }} settings={chartSettings} topWidgets={() => <ChartTitle onChange={() => undefined} />} enabledNavigationWidget={isDesktop} enabledChartFooter={false} showLastDigitStats={false} /> : <LiveChartFallback ticks={ticks} decimals={decimals} state={chartError ? 'Chart metadata unavailable — live tick feed is still active.' : !adapterInitialized ? 'Connecting to Deriv chart services…' : 'Loading Deriv market metadata…'} />}</div>
+                        <div className='dt-chart'>{adapterInitialized && chartData.activeSymbols.length ? <SmartChart id={'sentinel-dtrader-' + symbol} key={'sentinel-dtrader-' + symbol} symbol={symbol} barriers={[]} chartType='line' granularity={0 as TGranularity} isLive isMobile={isMobile} isConnectionOpened={!!chart_api.api} getQuotes={getQuotes} subscribeQuotes={subscribeQuotes} unsubscribeQuotes={unsubscribeQuotes} chartData={{ activeSymbols: chartData.activeSymbols, tradingTimes: chartData.tradingTimes }} settings={chartSettings} enabledNavigationWidget={isDesktop} enabledChartFooter={false} showLastDigitStats={false} /> : <LiveChartFallback ticks={ticks} decimals={decimals} state={chartError ? 'Chart metadata unavailable — live tick feed is still active.' : !adapterInitialized ? 'Connecting to Deriv chart services…' : 'Loading Deriv market metadata…'} />}</div>
                     </section>
 
                     <section className='dtrader__panel'>
