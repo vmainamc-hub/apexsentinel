@@ -12,21 +12,12 @@
     &--right { display: flex; flex-direction: row; left: calc(100vw - 16px); }
 
     @include mobile-or-tablet-screen {
-        // Keep the closed drawer handle above the portaled mobile Run footer.
-        // The footer is a separate viewport-level stacking context, so the
-        // drawer must outrank it or the handle cannot be tapped to open the
-        // Summary / Transactions / Journal panel.
-        // The run controls live in their own fixed footer. Keep the drawer
-        // completely above that footer so Stop/Run remains tappable while the
-        // Summary / Transactions / Journal sheet is open.
+        // Match the proven Deriv Bot mobile geometry: the sheet opens from
+        // below the viewport and stops above the fixed Run/Stop controls.
         z-index: 9999;
         width: 100vw !important;
-        height: calc(100dvh - 6.8rem - env(safe-area-inset-bottom, 0)) !important;
-        top: auto !important;
-        bottom: calc(6.8rem + env(safe-area-inset-bottom, 0)) !important;
-
-        .controls__buttons { width: 100%; }
-        .controls__animation { width: 100%; }
+        height: calc(100% - 10.1rem) !important;
+        top: calc(100% - 9.8rem) !important;
     }
 
     &__container {
@@ -79,40 +70,7 @@
 
     &--open {
         @include mobile-or-tablet-screen {
-            transform: translateY(0);
+            transform: translateY(calc(-100% + 3.6rem));
         }
-    }
-}
-
-@media (orientation: landscape) and (max-width: 1024px) {
-    .dc-drawer {
-        width: 100vw !important;
-        height: calc(100dvh - 5.2rem) !important;
-        top: 5.2rem !important;
-        left: 0 !important;
-
-        .controls__buttons { width: 100%; padding-inline: 1rem; }
-        .controls__animation { width: 100%; }
-        &__container { height: 100%; }
-    }
-
-    // In landscape the sheet sits above the fixed Run/Stop footer as well.
-    // Leave its grab handle visible without placing the sheet over the controls.
-    .dc-drawer {
-        transform: translateY(calc(100% - 9.2rem));
-    }
-
-    .dc-drawer--open {
-        transform: translateY(0) !important;
-    }
-
-    .dc-drawer .run-panel-tab__content--mobile {
-        position: absolute;
-        top: 0;
-        bottom: 5.2rem;
-        height: auto;
-        max-height: none;
-        width: 100%;
-        overflow: hidden;
     }
 }
