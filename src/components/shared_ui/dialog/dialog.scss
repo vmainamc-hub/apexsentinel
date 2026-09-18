@@ -38,7 +38,15 @@
         // reset/confirmation dialog keeps the base 11000 layer and therefore remains
         // above trading controls when it is explicitly opened.
         &.tour-dialog {
+            // The onboarding tour must not become a full-screen touch shield.
+            // Its dialog remains interactive, but the transparent/backdrop area
+            // lets the RunPanel drawer handle and controls receive input.
             z-index: 9000;
+            pointer-events: none;
+
+            .dc-dialog__dialog {
+                pointer-events: auto;
+            }
         }
 
         &--enter,
