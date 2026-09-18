@@ -416,6 +416,11 @@ export default class RunPanelStore {
             message: localize(
                 'This will clear all data in the summary, transactions, and journal panels. All counters will be reset to zero.'
             ),
+            ok_button_text: localize('Reset'),
+            cancel_button_text: localize('Cancel'),
+            dismissable: false,
+            is_closed_on_cancel: true,
+            is_closed_on_confirm: true,
         };
         this.is_dialog_open = true;
     };
