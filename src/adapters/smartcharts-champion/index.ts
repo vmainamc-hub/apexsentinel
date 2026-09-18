@@ -294,11 +294,11 @@ export function buildSmartchartsChampionAdapter(
 
             try {
                 const subscriptionId = transport.subscribe(apiRequest, (response: any) => {
-                    // Process all streaming messages for this subscription
-                    // The transport layer already filters by subscription ID
+                    // Deriv streaming responses arrive as { tick: {...} } or { ohlc: {...} }.
+                    // Normalize them to the adapter's TQuote shape before reaching DTrader.
                     try {
-                        const quote = response;
-                        callback(quote);
+                        const quote = transformations.toTQuoteFromStream(response, request.granularity);
+                        if (Number.isFinite(Number(quote.Close))) callback(quote);
                     } catch (error) {
                         logger.error('Error transforming stream message:', error);
                     }
