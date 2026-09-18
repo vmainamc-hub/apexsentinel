@@ -18,6 +18,7 @@ on:
       - 'src/pages/dashboard/announcements/announcements.tsx'
       - 'src/pages/dashboard/announcements/config.tsx'
       - 'src/pages/main/**'
+      - 'src/pages/dtrader/**'
       - 'src/pages/bot-builder/**'
       - 'src/pages/bot-store/**'
       - 'src/components/bot-store/**'
@@ -29,6 +30,7 @@ on:
       - 'src/components/shared/utils/screen/**'
       - 'src/constants/bot-contents.ts'
       - '.github/workflows/repair-dbot-shutdown.yml'
+  pull_request:
   workflow_dispatch:
 
 permissions:
