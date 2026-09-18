@@ -181,20 +181,16 @@ export const loadXmlIntoDBot = async (bot: StoredBot): Promise<BotValidation> =>
     return validation;
 };
 
-export const openDTrader = (symbol?: string, target?: Window | null): void => {
+export const openDTrader = (symbol?: string): void => {
+    const hash = '#dtrader';
     const url = symbol
-        ? `https://app.deriv.com/dtrader?symbol=${encodeURIComponent(symbol)}`
-        : 'https://app.deriv.com/dtrader';
-    if (target && !target.closed) {
-        target.location.href = url;
-        target.focus();
-        return;
-    }
-    window.open(url, '_blank', 'noopener,noreferrer');
+        ? `/${hash}?symbol=${encodeURIComponent(symbol)}`
+        : `/${hash}`;
+    window.location.assign(url);
 };
 
-export const loadBot = async (bot: StoredBot, dtraderWindow?: Window | null): Promise<BotValidation> => {
+export const loadBot = async (bot: StoredBot, _dtraderWindow?: Window | null): Promise<BotValidation> => {
     const validation = await loadXmlIntoDBot(bot);
-    openDTrader(bot.symbol, dtraderWindow);
+    openDTrader(bot.symbol);
     return validation;
 };
