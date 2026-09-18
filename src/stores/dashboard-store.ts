@@ -347,6 +347,10 @@ export default class DashboardStore implements IDashboardStore {
     };
 
     setActiveTab = (active_tab: number): void => {
+        if (active_tab === 3) {
+            this.is_chart_modal_visible = false;
+            this.is_trading_view_modal_visible = false;
+        }
         this.active_tab = active_tab;
         localStorage.setItem('active_tab', active_tab.toString());
     };
