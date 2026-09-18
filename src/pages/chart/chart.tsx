@@ -61,9 +61,10 @@ const Chart = observer(({ show_digits_stats }: { show_digits_stats: boolean }) =
 
         setIsSafari(isSafariBrowser());
 
-        return () => {
-            chart_api.api.forgetAll('ticks');
-        };
+        // Do not call forgetAll('ticks') here. The Deriv socket is shared by
+        // DTrader and other consumers, so this component must never remove
+        // subscriptions that it does not own. useSmartChartAdaptor scopes its
+        // own cleanup to the adapter instance.
     }, []);
 
     useEffect(() => {
