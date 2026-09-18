@@ -112,7 +112,6 @@ export default class RunPanelStore {
 
     run_id = '';
     onOkButtonClick: (() => void) | null = null;
-    bot_listeners_registered = false;
     onCancelButtonClick: (() => void) | null = null;
 
     // when error happens, if it is unrecoverable_errors we reset run-panel
@@ -442,7 +441,9 @@ export default class RunPanelStore {
     };
 
     registerBotListeners = () => {
-        if (this.bot_listeners_registered) return;
+        // The global observer is shared; always tear down this store's prior
+        // bot listeners before registering a fresh run listener set.
+        this.unregisterBotListeners();
 
         const { summary_card, transactions } = this.root_store;
 
@@ -459,7 +460,6 @@ export default class RunPanelStore {
         observer.register('bot.stop_button_click', this.onStopBotClick);
         observer.register('Error', this.onError);
         observer.register('bot.setPurchaseInProgress', this.SetpurchaseInProgress);
-        this.bot_listeners_registered = true;
     };
 
     SetpurchaseInProgress = () => {
@@ -750,9 +750,9 @@ export default class RunPanelStore {
     };
 
     unregisterBotListeners = () => {
-        this.bot_listeners_registered = false;
         observer.unregisterAll('bot.running');
         observer.unregisterAll('bot.stop');
+        observer.unregisterAll('bot.sell');
         observer.unregisterAll('bot.click_stop');
         observer.unregisterAll('bot.stop_button_click');
         observer.unregisterAll('bot.trade_again');
