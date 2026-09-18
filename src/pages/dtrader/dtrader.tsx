@@ -3,6 +3,7 @@ import { observer } from 'mobx-react-lite';
 import { ChartTitle, SmartChart, TGranularity } from '@deriv-com/smartcharts-champion';
 import { useDevice } from '@deriv-com/ui';
 import { useSmartChartAdaptor } from '@/hooks/useSmartChartAdaptor';
+import { generateOAuthURL } from '@/components/shared';
 import chart_api from '@/external/bot-skeleton/services/api/chart-api';
 import { useStore } from '@/hooks/useStore';
 import './dtrader.scss';
@@ -184,6 +185,16 @@ export default observer(function DTrader() {
         return () => window.clearInterval(timer);
     }, [openContract?.id]);
 
+    async function connectAccount() {
+        try {
+            const url = await generateOAuthURL();
+            if (url) window.location.replace(url);
+            else setMessage('Unable to start Deriv account connection.');
+        } catch (e: any) {
+            setMessage(e?.message || 'Unable to start Deriv account connection.');
+        }
+    }
+
     async function buy() {
         if (!proposal?.id || !client?.is_logged_in) { setMessage('Log in to your Deriv account before buying.'); return; }
         try {
@@ -203,6 +214,13 @@ export default observer(function DTrader() {
             await chart_api.api.send({ sell: openContract.id, price: 0 });
             setMessage('Sell request sent for contract ' + openContract.id);
         } catch (e: any) { setMessage(e?.message || 'Sell request failed.'); }
+    }
+
+    function isBarrierValid() {
+        if (!['DIGITOVER','DIGITUNDER','DIGITMATCH','DIGITDIFF'].includes(type)) return true;
+        if (type === 'DIGITUNDER') return barrier >= 0 && barrier <= 8;
+        if (type === 'DIGITOVER') return barrier >= 1 && barrier <= 9;
+        return barrier >= 0 && barrier <= 9;
     }
 
     const filteredMarkets = markets.filter(m => (m.symbol + ' ' + m.name).toLowerCase().includes(search.toLowerCase()));
@@ -250,7 +268,7 @@ export default observer(function DTrader() {
                     <label>DURATION</label><div className='dtrader__durations'>{[1,2,3,5,10].map(n => <button key={n} className={duration === n ? 'active' : ''} onClick={() => setDuration(n)}>{n}t</button>)}</div>
                     <label>STAKE</label><input type='number' value={stake} min={0.35} step={0.01} onChange={e => setStake(Math.max(0.35, Number(e.target.value)))} />
                     <div className='dtrader__quote'><Metric l='MARKET' v={symbol} /><Metric l='CONTRACT' v={labelFor(type, barrier)} /><Metric l='ASK' v={loading ? '…' : proposal?.ask_price != null ? Number(proposal.ask_price).toFixed(2) : '—'} /><Metric l='PAYOUT' v={proposal?.payout != null ? Number(proposal.payout).toFixed(2) : '—'} /></div>
-                    <button className='dtrader__buy' onClick={buy} disabled={!proposal?.id || loading || !!openContract}>{client?.is_logged_in ? 'BUY ' + labelFor(type, barrier).toUpperCase() : 'CONNECT DERIV ACCOUNT'}</button>
+                    <button className='dtrader__buy' onClick={client?.is_logged_in ? buy : connectAccount} disabled={client?.is_logged_in ? (!proposal?.id || loading || !!openContract || !isBarrierValid()) : false}>{client?.is_logged_in ? 'BUY ' + labelFor(type, barrier).toUpperCase() : 'CONNECT DERIV ACCOUNT'}</button>
                     {message && <div className='dtrader__message'>{message}</div>}
                     <small>Manual execution only. This cockpit never buys automatically.</small>
                 </aside>
