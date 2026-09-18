@@ -31,6 +31,16 @@
         transition: opacity 0.25s cubic-bezier(0.25, 0.1, 0.1, 0.25);
         background-color: var(--overlay-outside-dialog);
 
+
+        // The onboarding tour is a non-blocking guidance layer on mobile/tablet.
+        // Keep the RunPanel controls above it so the user can still open Summary,
+        // Transactions, Journal and use Run while the tour is present. The actual
+        // reset/confirmation dialog keeps the base 11000 layer and therefore remains
+        // above trading controls when it is explicitly opened.
+        &.tour-dialog {
+            z-index: 9000;
+        }
+
         &--enter,
         &--exit {
             opacity: 0;
