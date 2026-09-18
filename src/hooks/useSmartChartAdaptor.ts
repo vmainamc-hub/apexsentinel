@@ -79,47 +79,23 @@ export const useSmartChartAdaptor = (): UseSmartChartAdaptorReturn => {
         };
     }, []);
 
-    // Initialize the shared chart API first, then build the SmartCharts adapter.
-    // The previous implementation only initialized when chart_api.api already
-    // existed on the first render, which could leave DTrader permanently static.
+    // DTrader must consume the app's already-initialized shared Deriv API.
+    // It must never create a second WebSocket/session just for SmartChart.
     useEffect(() => {
-        if (adapterInitialized) return;
-        let cancelled = false;
-        const initialize = async () => {
-            try {
-                if (!chart_api.api) {
-                    await Promise.race([
-                        chart_api.init(),
-                        new Promise((_, reject) => {
-                            initTimeoutRef.current = setTimeout(() => reject(new Error('Deriv chart connection timed out')), 12000);
-                        }),
-                    ]);
-                    if (initTimeoutRef.current) { clearTimeout(initTimeoutRef.current); initTimeoutRef.current = null; }
-                }
-                if (cancelled || !chart_api.api) return;
-                const transport = createTransport();
-                const services = createServices();
-                const championAdapter = buildSmartchartsChampionAdapter(transport, services, {
-                    debug: true,
-                    subscriptionTimeout: 30000,
-                });
-
-                if (isMountedRef.current && !cancelled) {
-                    setAdapter(championAdapter);
-                    setAdapterInitialized(true);
-                    setError(null);
-                    setIsLoading(false);
-                }
-            } catch (err) {
-                if (isMountedRef.current) {
-                    setError(err instanceof Error ? err : new Error('Failed to initialize adapter'));
-                    setIsLoading(false);
-                }
-            }
-        };
-        initialize();
-        return () => { cancelled = true; };
-    }, [adapterInitialized]);
+        if (!chart_api.api) return;
+        const transport = createTransport();
+        const services = createServices();
+        const championAdapter = buildSmartchartsChampionAdapter(transport, services, {
+            debug: true,
+            subscriptionTimeout: 30000,
+        });
+        if (isMountedRef.current) {
+            setAdapter(championAdapter);
+            setAdapterInitialized(true);
+            setError(null);
+            setIsLoading(false);
+        }
+    }, []);
 
     // Load chart data when adapter is initialized
     useEffect(() => {
