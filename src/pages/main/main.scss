@@ -50,12 +50,22 @@
         }
 
         @include mobile-or-tablet-screen {
-            // Keep the tab header fixed and make the active tab content the
-            // vertical scroll owner. This preserves access to every main-tab
-            // icon while allowing long pages such as Bot Store to scroll.
+            // Keep the tab header fixed while giving the active tab content a
+            // real constrained height. This is required for long pages such as
+            // Bot Store to own vertical scrolling on mobile.
             height: 100%;
             min-height: 0;
             overflow: hidden;
+
+            > div {
+                height: 100%;
+                min-height: 0;
+            }
+
+            .dc-tabs {
+                height: 100%;
+                min-height: 0;
+            }
         }
 
         &--active {
