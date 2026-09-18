@@ -257,7 +257,7 @@ export default observer(function DTrader() {
             </div>
         </div>
     );
-}
+});
 
 function livePrice(ticks: Tick[], decimals: number) { const value = ticks.length ? ticks[ticks.length - 1].quote : null; return value == null ? '—' : value.toFixed(decimals); }
 
