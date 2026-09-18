@@ -99,22 +99,15 @@ export default observer(function DTrader() {
     }, [ticks, type]);
 
     useEffect(() => {
-        let cancelled = false;
-        (async () => {
-            try {
-                if (!chart_api.api) await chart_api.init();
-                const res = await chart_api.api?.send({ active_symbols: 'brief' });
-                const rows = Array.isArray(res?.active_symbols) ? res.active_symbols : [];
-                const live = rows.filter((m: any) => {
-                    const s = String(m?.underlying_symbol || '');
-                    const market = String(m?.market || '').toLowerCase();
-                    return s && (market.includes('synthetic') || market.includes('derived') || /^(R_|1HZ|BOOM|CRASH|RDBULL|RDBEAR|JD|JUMP|STEP|RANGE)/.test(s));
-                }).map((m: any) => ({ symbol: String(m.underlying_symbol), name: String(m.display_name || m.underlying_symbol), market: String(m.market || 'synthetic_index'), pip_size: Number(m.pip_size || m.pip || 0.01) }));
-                if (!cancelled && live.length) setMarkets(live);
-            } catch {}
-        })();
-        return () => { cancelled = true; };
-    }, []);
+        if (!chartData.activeSymbols.length) return;
+        const live = chartData.activeSymbols.map((m: any) => ({
+            symbol: String(m.underlying_symbol || m.symbol),
+            name: String(m.display_name || m.name || m.underlying_symbol || m.symbol),
+            market: String(m.market || 'synthetic_index'),
+            pip_size: Number(m.pip_size || m.pip || 0.01),
+        })).filter((m: any) => m.symbol);
+        if (live.length) setMarkets(live);
+    }, [chartData.activeSymbols]);
 
     useEffect(() => {
         let cancelled = false;
