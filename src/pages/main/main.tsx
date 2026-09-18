@@ -43,6 +43,7 @@ import ChartModal from '../chart/chart-modal';
 import Dashboard from '../dashboard';
 import RunStrategy from '../dashboard/run-strategy';
 import BotStore from '../bot-store/bot-store';
+import DTrader from '../dtrader/dtrader';
 import './main.scss';
 
 const ChartWrapper = lazy(() => import('../chart/chart-wrapper'));
@@ -79,7 +80,7 @@ const AppWrapper = observer(() => {
     const { clear } = summary_card;
     const { DASHBOARD, BOT_BUILDER, BOT_STORE, CHART, TUTORIAL } = DBOT_TABS;
     const init_render = React.useRef(true);
-    const hash = ['dashboard', 'bot_builder', 'bot_store', 'chart', 'tutorial'];
+    const hash = ['dashboard', 'bot_builder', 'bot_store', 'dtrader', 'chart', 'tutorial'];
     const { isDesktop, isTablet } = useDevice();
     const location = useLocation();
     const navigate = useNavigate();
@@ -369,6 +370,12 @@ const AppWrapper = observer(() => {
                                 id='id-bot-store'
                             >
                                 <BotStore />
+                            </div>
+                            <div
+                                label='DTrader'
+                                id='id-dtrader'
+                            >
+                                <DTrader />
                             </div>
                             <div
                                 label={
