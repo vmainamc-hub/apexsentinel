@@ -71,11 +71,20 @@ export default observer(function DTrader() {
     const [message, setMessage] = useState('');
 
 
-    const live1000 = ticks.slice(-1000);
-    const analysis = ticks.slice(-windowSize);
-    const counts = useMemo(() => Array.from({ length: 10 }, (_, d) => live1000.filter(t => t.digit === d).length), [live1000]);
+    const live1000 = useMemo(() => (ticks.length > 1000 ? ticks.slice(-1000) : ticks), [ticks]);
+    const analysis = useMemo(() => ticks.slice(-windowSize), [ticks, windowSize]);
+    const { counts, evenCount } = useMemo(() => {
+        const next = new Array(10).fill(0) as number[];
+        let even = 0;
+        for (let i = 0; i < live1000.length; i++) {
+            const d = live1000[i].digit;
+            next[d]++;
+            if (d % 2 === 0) even++;
+        }
+        return { counts: next, evenCount: even };
+    }, [live1000]);
     const total = Math.max(1, live1000.length);
-    const evenPct = live1000.filter(t => t.digit % 2 === 0).length / total * 100;
+    const evenPct = (evenCount / total) * 100;
     const oddPct = 100 - evenPct;
     const last = live1000.length ? live1000[live1000.length - 1].digit : '—';
     const selectedMarket = markets.find(m => m.symbol === symbol);
@@ -90,11 +99,19 @@ export default observer(function DTrader() {
     const psychology = useMemo(() => {
         const n = Math.min(1000, ticks.length);
         if (!n) return { odd: 0, even: 0, under7: 0, over2: 0, danger: 100 };
-        const a = ticks.slice(-n);
-        const odd = a.filter(t => t.digit % 2).length / n * 100;
+        let odd_n = 0;
+        let under7_n = 0;
+        let over2_n = 0;
+        for (let i = ticks.length - n; i < ticks.length; i++) {
+            const d = ticks[i].digit;
+            if (d % 2) odd_n++;
+            if (d <= 6) under7_n++;
+            if (d >= 3) over2_n++;
+        }
+        const odd = (odd_n / n) * 100;
         const even = 100 - odd;
-        const under7 = a.filter(t => t.digit <= 6).length / n * 100;
-        const over2 = a.filter(t => t.digit >= 3).length / n * 100;
+        const under7 = (under7_n / n) * 100;
+        const over2 = (over2_n / n) * 100;
         const danger = Math.round(Math.min(100, Math.abs(50 - (type === 'DIGITUNDER' ? under7 : over2)) * 2 + (n < 1000 ? 25 : 0)));
         return { odd, even, under7, over2, danger };
     }, [ticks, type]);
@@ -113,18 +130,24 @@ export default observer(function DTrader() {
         }
     }, [chartData.activeSymbols]);
 
+    const quotesRef = useRef({ getQuotes, subscribeQuotes, unsubscribeQuotes });
     useEffect(() => {
+        quotesRef.current = { getQuotes, subscribeQuotes, unsubscribeQuotes };
+    }, [getQuotes, subscribeQuotes, unsubscribeQuotes]);
+
+    useEffect(() => {
+        if (!adapterInitialized) return;
         let cancelled = false;
         let unsubscribe: (() => void) | undefined;
         setFeedState('LOADING');
         (async () => {
             try {
-                const response = await getQuotes({ symbol, granularity: 0, count: 1000 });
+                const response = await quotesRef.current.getQuotes({ symbol, granularity: 0, count: 1000 });
                 const prices = response?.history?.prices || [];
                 if (cancelled) return;
                 setTicks(prices.map((q: number) => ({ epoch: 0, quote: Number(q), digit: digitFromQuote(Number(q), decimalsRef.current) })).slice(-1000));
                 setFeedState('LIVE');
-                unsubscribe = subscribeQuotes({ symbol, granularity: 0 }, (quote: any) => {
+                unsubscribe = quotesRef.current.subscribeQuotes({ symbol, granularity: 0 }, (quote: any) => {
                     if (cancelled) return;
                     const price = Number(quote?.Close ?? quote?.quote ?? quote?.price);
                     if (!Number.isFinite(price)) return;
@@ -138,9 +161,9 @@ export default observer(function DTrader() {
         return () => {
             cancelled = true;
             try { unsubscribe?.(); } catch {}
-            try { unsubscribeQuotes({ symbol, granularity: 0 }); } catch {}
+            try { quotesRef.current.unsubscribeQuotes({ symbol, granularity: 0 }); } catch {}
         };
-    }, [symbol, getQuotes, subscribeQuotes, unsubscribeQuotes]);
+    }, [symbol, adapterInitialized]);
 
     useEffect(() => {
         if (!client?.is_logged_in || !chart_api.api?.send) {
@@ -222,7 +245,8 @@ export default observer(function DTrader() {
 
     const filteredMarkets = markets.filter(m => (m.symbol + ' ' + m.name).toLowerCase().includes(search.toLowerCase()));
 
-    const chartSettings = { assetInformation: false, countdown: true, isHighestLowestMarkerEnabled: false, language: common.current_language.toLowerCase(), position: ui.is_chart_layout_default ? 'bottom' : 'left', theme: ui.is_dark_mode_on ? 'dark' : 'light' };
+    const chartSettings = useMemo(() => ({ assetInformation: false, countdown: true, isHighestLowestMarkerEnabled: false, language: common.current_language.toLowerCase(), position: ui.is_chart_layout_default ? 'bottom' : 'left', theme: ui.is_dark_mode_on ? 'dark' : 'light' }), [common.current_language, ui.is_chart_layout_default, ui.is_dark_mode_on]);
+    const smartChartData = useMemo(() => ({ activeSymbols: chartData.activeSymbols, tradingTimes: chartData.tradingTimes }), [chartData.activeSymbols, chartData.tradingTimes]);
 
     return (
         <div className='dtrader dtrader--real'>
@@ -239,7 +263,7 @@ export default observer(function DTrader() {
                 <main>
                     <section className='dt-chart-card'>
                         <div className='dt-chart-head'><div><small>LIVE MARKET</small><strong>{selectedMarket?.name || symbol}</strong></div><b>{livePrice(ticks, decimals)}</b></div>
-                        <div className='dt-chart'>{adapterInitialized && chartData.activeSymbols.length ? <SmartChart id={'sentinel-dtrader-' + symbol} key={'sentinel-dtrader-' + symbol} symbol={symbol} barriers={[]} chartType='line' granularity={0 as TGranularity} isLive isMobile={isMobile} isConnectionOpened={!!chart_api.api} getQuotes={getQuotes} subscribeQuotes={subscribeQuotes} unsubscribeQuotes={unsubscribeQuotes} chartData={{ activeSymbols: chartData.activeSymbols, tradingTimes: chartData.tradingTimes }} settings={chartSettings} enabledNavigationWidget={false} enabledChartFooter={false} showLastDigitStats={false} topWidgets={() => <></>} chartControlsWidgets={null} /> : <LiveChartFallback ticks={ticks} decimals={decimals} state={chartError ? 'Chart metadata unavailable — live tick feed is still active.' : !adapterInitialized ? 'Connecting to Deriv chart services…' : 'Loading Deriv market metadata…'} />}</div>
+                        <div className='dt-chart'>{adapterInitialized && chartData.activeSymbols.length ? <SmartChart id={'sentinel-dtrader-' + symbol} key={'sentinel-dtrader-' + symbol} symbol={symbol} barriers={[]} chartType='line' granularity={0 as TGranularity} isLive isMobile={isMobile} isConnectionOpened={!!chart_api.api} getQuotes={getQuotes} subscribeQuotes={subscribeQuotes} unsubscribeQuotes={unsubscribeQuotes} chartData={smartChartData} settings={chartSettings} enabledNavigationWidget={false} enabledChartFooter={false} showLastDigitStats={false} topWidgets={() => <></>} chartControlsWidgets={null} /> : <LiveChartFallback ticks={ticks} decimals={decimals} state={chartError ? 'Chart metadata unavailable — live tick feed is still active.' : !adapterInitialized ? 'Connecting to Deriv chart services…' : 'Loading Deriv market metadata…'} />}</div>
                     </section>
 
                     <section className='dtrader__panel'>
