@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 async function collectRunDiagnostic(page: import('@playwright/test').Page, width: number, height: number) {
     await page.setViewportSize({ width, height });
     await page.goto('/#bot_builder', { waitUntil: 'domcontentloaded' });
-    await page.locator('#id-bot-builder').waitFor({ state: 'visible', timeout: 20000 });
+    await page.locator('.bot-builder.bot-builder--active').waitFor({ state: 'visible', timeout: 20000 });
     await page.waitForFunction(() => Boolean(window.Blockly?.derivWorkspace), undefined, { timeout: 20000 });
 
     const tour = page.locator('.tour-dialog').first();
