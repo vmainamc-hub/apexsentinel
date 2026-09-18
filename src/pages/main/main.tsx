@@ -430,6 +430,8 @@ const AppWrapper = observer(() => {
             </DesktopWrapper>
             <MobileWrapper>
                 <RunPanel />
+            </MobileWrapper>
+            {(!isDesktop || isTablet) && (
                 <Dialog
                     title={title}
                     message={message}
@@ -442,7 +444,7 @@ const AppWrapper = observer(() => {
                     onOk={onOkButtonClick}
                     is_closed_on_cancel={is_closed_on_cancel}
                 />
-            </MobileWrapper>
+            )}
             <TradeTypeConfirmationModal {...getTradeTypeModalProps()} />
         </React.Fragment>
     );
