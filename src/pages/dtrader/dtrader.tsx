@@ -46,7 +46,15 @@ export default observer(function DTrader() {
     const { client, common, ui } = useStore();
     const { isDesktop, isMobile } = useDevice();
     const { adapterInitialized, chartData, getQuotes, subscribeQuotes, unsubscribeQuotes, error: chartError } = useSmartChartAdaptor();
-    const [symbol, setSymbol] = useState('1HZ10V');
+    const initialSymbol = useMemo(() => {
+        try {
+            const fromUrl = new URLSearchParams(window.location.search).get('symbol');
+            return fromUrl && fromUrl.trim() ? fromUrl.trim() : '1HZ10V';
+        } catch {
+            return '1HZ10V';
+        }
+    }, []);
+    const [symbol, setSymbol] = useState(initialSymbol);
     const [markets, setMarkets] = useState<any[]>([]);
     const [marketOpen, setMarketOpen] = useState(false);
     const [ticks, setTicks] = useState<Tick[]>([]);
