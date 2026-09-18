@@ -431,8 +431,12 @@ const AppWrapper = observer(() => {
                         <RunPanel />
                     </div>
                 )}
-                <ChartModal />
-                <TradingViewModal />
+                {active_tab !== DTRADER && (
+                    <>
+                        <ChartModal />
+                        <TradingViewModal />
+                    </>
+                )}
             </DesktopWrapper>
             <MobileWrapper>{active_tab !== DTRADER && <RunPanel />}</MobileWrapper>
             <Dialog
