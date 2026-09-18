@@ -58,7 +58,7 @@ function labelFor(type: ContractType, barrier: number) {
 export default observer(function DTrader() {
     const { client, common, ui } = useStore();
     const { isDesktop, isMobile } = useDevice();
-    const { chartData, getQuotes, subscribeQuotes, unsubscribeQuotes } = useSmartChartAdaptor();
+    const { adapterInitialized, chartData, getQuotes, subscribeQuotes, unsubscribeQuotes, error: chartError } = useSmartChartAdaptor();
     const [symbol, setSymbol] = useState('1HZ10V');
     const [markets, setMarkets] = useState<any[]>(FALLBACK_MARKETS.map(([symbol, name]) => ({ symbol, name, market: 'synthetic_index', pip_size: 0.01 })));
     const [marketOpen, setMarketOpen] = useState(false);
@@ -230,7 +230,7 @@ export default observer(function DTrader() {
     return (
         <div className='dtrader dtrader--real'>
             <div className='dt-header'>
-                <div className='dt-brand'><div className='dt-brand-mark'>S</div><div><strong>DTrader</strong><span>Sentinel trading cockpit</span></div></div>
+                <div className='dt-brand'><div><strong>DTrader</strong><span>Live Deriv trading terminal</span></div></div>
                 <div className='dt-market-picker-wrap'>
                     <button className='dt-market-picker' onClick={() => setMarketOpen(v => !v)}><b>{symbol}</b><span>{selectedMarket?.name || symbol}</span><em>⌄</em></button>
                     {marketOpen && <div className='dt-market-menu'><div className='dt-search'><input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder='Search synthetic / derived markets…' /><button onClick={() => setMarketOpen(false)}>×</button></div><div className='dt-market-list'>{filteredMarkets.slice(0, 80).map(m => <button key={m.symbol} className={m.symbol === symbol ? 'selected' : ''} onClick={() => { setSymbol(m.symbol); setMarketOpen(false); setSearch(''); }}><strong>{m.symbol}</strong><span>{m.name}</span></button>)}</div></div>}
@@ -242,7 +242,7 @@ export default observer(function DTrader() {
                 <main>
                     <section className='dt-chart-card'>
                         <div className='dt-chart-head'><div><small>LIVE MARKET</small><strong>{selectedMarket?.name || symbol}</strong></div><b>{livePrice(ticks, decimals)}</b></div>
-                        <div className='dt-chart'>{chartData.activeSymbols.length ? <SmartChart id={'sentinel-dtrader-' + symbol} key={'sentinel-dtrader-' + symbol} symbol={symbol} barriers={[]} chartType='line' granularity={0 as TGranularity} isLive isMobile={isMobile} isConnectionOpened={!!chart_api.api} getQuotes={getQuotes} subscribeQuotes={subscribeQuotes} unsubscribeQuotes={unsubscribeQuotes} chartData={{ activeSymbols: chartData.activeSymbols, tradingTimes: chartData.tradingTimes }} settings={chartSettings} topWidgets={() => <ChartTitle onChange={() => undefined} />} enabledNavigationWidget={isDesktop} enabledChartFooter={false} showLastDigitStats={false} /> : <div className='dt-chart-loading'>Connecting to live Deriv market data…</div>}</div>
+                        <div className='dt-chart'>{adapterInitialized && chartData.activeSymbols.length ? <SmartChart id={'sentinel-dtrader-' + symbol} key={'sentinel-dtrader-' + symbol} symbol={symbol} barriers={[]} chartType='line' granularity={0 as TGranularity} isLive isMobile={isMobile} isConnectionOpened={!!chart_api.api} getQuotes={getQuotes} subscribeQuotes={subscribeQuotes} unsubscribeQuotes={unsubscribeQuotes} chartData={{ activeSymbols: chartData.activeSymbols, tradingTimes: chartData.tradingTimes }} settings={chartSettings} topWidgets={() => <ChartTitle onChange={() => undefined} />} enabledNavigationWidget={isDesktop} enabledChartFooter={false} showLastDigitStats={false} /> : <LiveChartFallback ticks={ticks} decimals={decimals} state={chartError ? 'Chart metadata unavailable — live tick feed is still active.' : !adapterInitialized ? 'Connecting to Deriv chart services…' : 'Loading Deriv market metadata…'} />}</div>
                     </section>
 
                     <section className='dtrader__panel'>
@@ -278,6 +278,15 @@ export default observer(function DTrader() {
 });
 
 function livePrice(ticks: Tick[], decimals: number) { const value = ticks.length ? ticks[ticks.length - 1].quote : null; return value == null ? '—' : value.toFixed(decimals); }
+
+function LiveChartFallback({ ticks, decimals, state }: { ticks: Tick[]; decimals: number; state: string }) {
+    const points = ticks.slice(-120);
+    if (points.length < 2) return <div className='dt-chart-loading'>{state}</div>;
+    const values = points.map(t => t.quote);
+    const min = Math.min(...values), max = Math.max(...values), span = max - min || 1;
+    const path = values.map((v, i) => `${(i / (values.length - 1)) * 100},${92 - ((v - min) / span) * 78}`).join(' ');
+    return <div className='dt-chart-fallback'><div className='dt-fallback-title'><span>LIVE TICK PREVIEW</span><b>{values[values.length - 1].toFixed(decimals)}</b></div><svg viewBox='0 0 100 100' preserveAspectRatio='none' aria-label='Live tick preview'><polyline points={path} fill='none' vectorEffect='non-scaling-stroke' /></svg><small>{state}</small></div>;
+}
 
 function Metric({ l, v }: { l: string; v: string }) {
     return <div className='dtrader__metric'><small>{l}</small><b>{v}</b></div>;
