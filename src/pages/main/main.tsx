@@ -434,16 +434,17 @@ const AppWrapper = observer(() => {
             {(!isDesktop || isTablet) && (
                 <Dialog
                     title={title}
-                    message={message}
                     is_visible={is_dialog_open}
-                    has_close_button={dismissable}
+                    dismissable={dismissable}
                     onClose={onCloseDialog}
                     cancel_button_text={cancel_button_text}
-                    ok_button_text={ok_button_text}
+                    confirm_button_text={ok_button_text}
                     onCancel={onCancelButtonClick}
-                    onOk={onOkButtonClick}
+                    onConfirm={onOkButtonClick || onCloseDialog}
                     is_closed_on_cancel={is_closed_on_cancel}
-                />
+                >
+                    {message}
+                </Dialog>
             )}
             <TradeTypeConfirmationModal {...getTradeTypeModalProps()} />
         </React.Fragment>
