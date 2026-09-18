@@ -61,6 +61,7 @@ export const useSmartChartAdaptor = (): UseSmartChartAdaptorReturn => {
 
     // Refs to track mounted state and prevent memory leaks
     const isMountedRef = useRef(true);
+    const adapterRef = useRef<SmartchartsChampionAdapter | null>(null);
     const cleanupFunctionsRef = useRef<Array<() => void>>([]);
     const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Ref to store timeout for cleanup
 
@@ -84,6 +85,9 @@ export const useSmartChartAdaptor = (): UseSmartChartAdaptorReturn => {
         let cancelled = false;
         const initialize = () => {
             if (cancelled || !isMountedRef.current || !chart_api.api) return;
+            // APIBase.init() can fire ready listeners more than once, including on reconnect.
+            // Keep one adapter bound to the shared transport so consumer callbacks do not churn.
+            if (adapterRef.current) return;
             try {
                 const transport = createTransport();
                 const services = createServices();
@@ -91,6 +95,7 @@ export const useSmartChartAdaptor = (): UseSmartChartAdaptorReturn => {
                     debug: false,
                     subscriptionTimeout: 30000,
                 });
+                adapterRef.current = championAdapter;
                 setAdapter(championAdapter);
                 setAdapterInitialized(true);
                 setError(null);
@@ -299,13 +304,14 @@ export const useSmartChartAdaptor = (): UseSmartChartAdaptorReturn => {
 
             // Clean up only subscriptions owned by this SmartChart adapter.
             // Never call forgetAll('ticks') because the shared socket is also used by Sentinel.
-            if (adapter?.transport) {
+            if (adapterRef.current?.transport) {
                 try {
-                    adapter.transport.unsubscribeAll();
+                    adapterRef.current.transport.unsubscribeAll();
                 } catch (err) {
                     logger.error('Error unsubscribing from adapter:', err);
                 }
             }
+            adapterRef.current = null;
 
             // Clear any pending retry timeouts
             if (retryTimeoutRef.current) {
@@ -313,7 +319,7 @@ export const useSmartChartAdaptor = (): UseSmartChartAdaptorReturn => {
                 retryTimeoutRef.current = null;
             }
         };
-    }, [adapter]);
+    }, []);
 
     // Return object without useMemo wrapper (callbacks are already memoized)
     return {
