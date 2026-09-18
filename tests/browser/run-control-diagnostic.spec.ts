@@ -3,12 +3,15 @@ import { expect, test } from '@playwright/test';
 async function collectRunDiagnostic(page: import('@playwright/test').Page, width: number, height: number) {
     await page.setViewportSize({ width, height });
     await page.goto('/#bot_builder', { waitUntil: 'domcontentloaded' });
+    const botBuilder = page.locator('.bot-builder.bot-builder--active');
     const botBuilderTab = page.locator('#id-bot-builder');
-    await botBuilderTab.waitFor({ state: 'attached', timeout: 20000 });
-    if (!(await botBuilderTab.evaluate(element => element.classList.contains('dc-tabs__active')).catch(() => false))) {
-        await botBuilderTab.click();
+    if (await botBuilder.count() === 0) {
+        await botBuilderTab.waitFor({ state: 'visible', timeout: 20000 });
+        if (!(await botBuilderTab.evaluate(element => element.classList.contains('dc-tabs__active')).catch(() => false))) {
+            await botBuilderTab.click();
+        }
     }
-    await page.locator('.bot-builder.bot-builder--active').waitFor({ state: 'visible', timeout: 20000 });
+    await botBuilder.waitFor({ state: 'visible', timeout: 20000 });
     await page.waitForFunction(() => Boolean(window.Blockly?.derivWorkspace), undefined, { timeout: 20000 });
 
     const tour = page.locator('.tour-dialog').first();
