@@ -145,6 +145,15 @@ test.describe('Apex Sentinel mobile/landscape UI regression', () => {
         }
         await page.locator('.bot-builder.bot-builder--active').waitFor({ state: 'visible', timeout: 15000 });
 
+        const tour = page.locator('.tour-dialog').first();
+        if (await tour.count() > 0 && await tour.isVisible().catch(() => false)) {
+            const skip = tour.getByRole('button', { name: 'Skip', exact: true });
+            if (await skip.count() > 0) {
+                await skip.click();
+                await expect(tour).toBeHidden({ timeout: 5000 });
+            }
+        }
+
         const drawerToggle = page.locator('.dc-drawer__toggle').first();
         await drawerToggle.waitFor({ state: 'visible', timeout: 15000 });
         await assertHitTarget(page, '.dc-drawer__toggle', 'Run panel drawer handle');
