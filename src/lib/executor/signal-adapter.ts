@@ -36,7 +36,7 @@ export function validateSignalStructure(sig: Partial<ExecutionSignal>): { valid:
  */
 export function buildExecutionSignal(item: RankedOpportunity): ExecutionSignal {
   const c = item.contract;
-  const isOver = c.contractType === "DIGITOVER" || c.id.startsWith("OVER");
+  const isOver = c.side === "OVER" || c.id.startsWith("OVER");
   const barrier = getContractBarrier(c.id);
   const ep = item.entryPoint;
   const entryDigit = ep?.preferred ? ep.preferred.digit : undefined;
