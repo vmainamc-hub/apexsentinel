@@ -3,6 +3,7 @@ name: Verify DBot shutdown repair
 # Final compile-boundary pass
 # Audit payload shape verified
 # Final journal typing pass
+# Browser diagnostic selector hardened
 
 on:
   push:
