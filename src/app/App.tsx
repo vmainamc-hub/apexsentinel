@@ -16,7 +16,9 @@ import './app-root.scss';
 
 const Layout = lazy(() => import('../components/layout'));
 const AppRoot = lazy(() => import('./app-root'));
-const SentinelForge = lazy(() => import('../pages/sentinel-forge'));
+// Sentinel Forge is now a tab inside AppRoot (see src/pages/main/main.tsx),
+// selected via the '/#sentinel_forge' hash like the other dashboard tools —
+// it is no longer a separate top-level route.
 
 /**
  * Component wrapper to handle language URL parameter
@@ -57,7 +59,6 @@ const router = createBrowserRouter(
         >
             {/* All child routes will be passed as children to Layout */}
             <Route index element={<AppRoot />} />
-            <Route path='sentinel-forge' element={<SentinelForge />} />
             {/* App Builder embeds the template at /preview — render the same app shell */}
             <Route path='preview' element={<AppRoot />} />
         </Route>
