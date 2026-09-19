@@ -102,7 +102,8 @@ export function buildExecutionSignal(item: RankedOpportunity): ExecutionSignal {
       intelState: item.intel?.dataState,
       spread: item.intel?.spread,
       baseSignalId: id,
-      runIndex: 1,\n      runsTotal: undefined,
+      runIndex: 1,
+      runsTotal: undefined,
     },
   };
 }

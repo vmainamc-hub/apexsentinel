@@ -1,6 +1,6 @@
 // SENTINEL EXECUTION JOURNAL & AUDIT LOG
 // Records all executed trades, rejected signals, and forensic audit events.
-// Persists locally first (offline-safe) and mirrors to Supabase when authenticated.
+// Persists locally first so the execution journal remains available offline.
 
 import type { ExecutionAuditRecord, AuditEvent, AuditEventType } from "./types";
 
