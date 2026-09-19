@@ -1,7 +1,6 @@
 import type { CellId } from "./constants";
 import type { ObservationDossier, ObservationEvent, QualificationSnapshot } from "./types";
 import type { ObservationPersistenceAdapter } from "./persistence";
-import { supabase } from "@/integrations/supabase/client";
 import { safeStorage, safeJsonParse } from "@/lib/storage-fallback";
 
 const LOCAL_STORAGE_KEY = "apex.observation.persistence.v1";
@@ -116,60 +115,13 @@ export class SupabasePersistenceAdapter implements ObservationPersistenceAdapter
     }, DEBOUNCE_SAVE_MS);
   }
 
-  private async getAuthUserId(): Promise<string | null> {
-    const now = Date.now();
-    // Cache auth check for 30 seconds to avoid spamming the network on each tick
-    if (now - this.lastAuthCheckAt < 30_000) {
-      return this.cachedUserId;
-    }
-    this.lastAuthCheckAt = now;
-    try {
-      const { data: authData } = await supabase.auth.getUser();
-      this.cachedUserId = authData?.user?.id ?? null;
-      return this.cachedUserId;
-    } catch {
-      this.cachedUserId = null;
-      return null;
-    }
-  }
-
   async saveDossierSnapshot(dossier: ObservationDossier): Promise<void> {
     const compacted = compactDossierForStorage(dossier);
     this.memoryStore.dossiers[dossier.cellId] = compacted;
     this.memoryStore.updatedAt = Date.now();
     this.scheduleLocalSave();
 
-    // Asynchronously mirror high-value states (RIPE/CONFIRMING) to Supabase with rate-limiting
-    if (dossier.state === "RIPE" || dossier.state === "CONFIRMING") {
-      const now = Date.now();
-      const lastSync = this.lastSupabaseSync.get(dossier.cellId) ?? 0;
-      if (now - lastSync < SUPABASE_THROTTLE_MS) {
-        return;
-      }
-      this.lastSupabaseSync.set(dossier.cellId, now);
-
-      try {
-        const userId = await this.getAuthUserId();
-        if (userId) {
-          await supabase.from("apex_market_state").upsert(
-            {
-              symbol: dossier.marketId,
-              user_id: userId,
-              kind: `obs_dossier_${dossier.cellId}`,
-              model_version: 1,
-              payload: compacted as unknown as never,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "symbol,kind,user_id" },
-          );
-        }
-      } catch {
-        // Non-blocking background sync
-      }
-    }
-  }
-
-  async loadDossier(cellId: CellId): Promise<ObservationDossier | null> {
+  }\n\n  async loadDossier(cellId: CellId): Promise<ObservationDossier | null> {
     return this.memoryStore.dossiers[cellId] ?? null;
   }
 
