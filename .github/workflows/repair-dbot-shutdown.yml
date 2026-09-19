@@ -19,6 +19,7 @@ on:
       - 'src/pages/dashboard/announcements/config.tsx'
       - 'src/pages/main/**'
       - 'src/pages/dtrader/**'
+      - 'src/lib/executor/engine.ts'
       - 'src/pages/bot-builder/**'
       - 'src/pages/bot-store/**'
       - 'src/components/bot-store/**'
