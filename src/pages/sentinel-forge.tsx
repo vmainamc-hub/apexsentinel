@@ -1,10 +1,11 @@
 import {useSentinelForge} from "@/hooks/useSentinelForge";
 import {useState} from "react";
+import {CONNECTION_STATUS} from "@/external/bot-skeleton/services/api/observables/connection-status-stream";
 import "./sentinel-forge.scss";
 export default function SentinelForge(){
  const {apex,api,executor,risk,session,queue,openContracts,executeManual,updateRisk}=useSentinelForge();
  const [stake,setStake]=useState(risk.baseStake); const signal=executor.getStagedSignal();
- const connected=api.isAuthorized&&api.connectionStatus==="OPENED";
+ const connected=api.isAuthorized&&api.connectionStatus===CONNECTION_STATUS.OPENED;
  return <div className="sentinel-forge">
   <div className="forge-head"><div><div className="forge-kicker">SENTINEL FORGE</div><h1>Signal execution workspace</h1><p>Sentinel intelligence remains authoritative. Forge only controls execution.</p></div><div className="forge-health"><span className={connected?"dot live":"dot"}></span>{connected?"ACCOUNT CONNECTED":"ACCOUNT OFFLINE"}<b>{api.activeLoginid||"—"}</b></div></div>
   <div className="forge-grid">
