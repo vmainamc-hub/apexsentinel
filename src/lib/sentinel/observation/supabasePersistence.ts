@@ -67,7 +67,7 @@ function compactDossierForStorage(dossier: ObservationDossier): ObservationDossi
   };
 }
 
-export class SupabasePersistenceAdapter implements ObservationPersistenceAdapter {
+export class LocalObservationPersistenceAdapter implements ObservationPersistenceAdapter {
   private memoryStore: LocalStore = {
     dossiers: {},
     events: {},

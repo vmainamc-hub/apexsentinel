@@ -22,7 +22,7 @@ import type {
 import { assessQuality, selectivityCalibrationCheck } from "./selectivity";
 import { interpretMomentum } from "./momentumLayer";
 import type { ObservationPersistenceAdapter } from "./persistence";
-import { SupabasePersistenceAdapter } from "./supabasePersistence";
+import { LocalObservationPersistenceAdapter } from "./supabasePersistence";
 
 /** PHASE 15D — bounded per-cell identity memory (ticks retained per cell). */
 const IDENTITY_MEMORY_PER_CELL = 256;
@@ -60,7 +60,7 @@ export class ObservationEngine {
   private cells = new Map<CellId, ObservationCell>();
   private regimeTracker = new RegimeTracker();
   readonly qualificationManager = new QualificationManager();
-  private persistence: ObservationPersistenceAdapter = new SupabasePersistenceAdapter();
+  private persistence: ObservationPersistenceAdapter = new LocalObservationPersistenceAdapter();
 
   // Health and telemetry metrics
   private lastIngestAt = 0;
