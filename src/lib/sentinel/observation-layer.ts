@@ -50,7 +50,13 @@ import {
   PersistedObservationState,
   PersistedObservationEvent,
 } from "./observation-persistence";
-import { SUPPORTED_MARKETS } from "@/constants";
+import { MARKET_IDS } from "./observation/constants";
+import { DERIV_SYMBOLS } from "@/hooks/useDerivStream";
+
+const SUPPORTED_MARKETS = MARKET_IDS.map((symbol) => ({
+  symbol,
+  displayName: DERIV_SYMBOLS.find((m) => m.symbol === symbol)?.displayName || symbol,
+}));
 import {
   continuousRegimeObserver,
   ContinuousRegimeReport,
