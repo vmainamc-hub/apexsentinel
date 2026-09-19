@@ -50,7 +50,7 @@ import {
   PersistedObservationState,
   PersistedObservationEvent,
 } from "./observation-persistence";
-import { SUPPORTED_MARKETS } from "../constants";
+import { SUPPORTED_MARKETS } from "@/constants";
 import {
   continuousRegimeObserver,
   ContinuousRegimeReport,
