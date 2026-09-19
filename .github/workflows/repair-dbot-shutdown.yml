@@ -1,4 +1,9 @@
 name: Verify DBot shutdown repair
+# Full-chain verification: runtime -> type-check -> production build -> browser regression
+# Final compile-boundary pass
+# Audit payload shape verified
+# Final journal typing pass
+# Browser diagnostic targets current Run control surface
 
 on:
   push:
@@ -19,6 +24,12 @@ on:
       - 'src/pages/dashboard/announcements/config.tsx'
       - 'src/pages/main/**'
       - 'src/pages/dtrader/**'
+      - 'src/lib/executor/**'
+      - 'src/hooks/useSentinelForge.ts'
+      - 'src/integrations/supabase/**'
+      - 'src/lib/deriv/**'
+      - 'src/lib/precision-edge/**'
+      - 'src/lib/precision-edge-v2/**'
       - 'src/pages/bot-builder/**'
       - 'src/pages/bot-store/**'
       - 'src/components/bot-store/**'

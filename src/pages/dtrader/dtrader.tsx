@@ -27,6 +27,86 @@ function digitFromQuote(quote: number, decimals = 2) {
     return Number(fixed.charAt(fixed.length - 1)) || 0;
 }
 
+const TERMINAL_STATUSES = ['won', 'lost', 'sold', 'expired'];
+const TREND_WINDOW = 60;
+
+/**
+ * Colour-classifies each of the 10 digits against the current distribution:
+ *  - is-most / is-second-most  -> highest / 2nd highest frequency in the window
+ *  - is-least / is-second-least -> lowest / 2nd lowest frequency in the window
+ *  - is-trend                   -> steepest rising frequency over the trailing 60 ticks
+ * Priority when a digit qualifies for more than one: trend > most > least > second-most > second-least.
+ * Everything else is left unclassified (plain).
+ */
+function classifyDigits(counts: number[], recentTicks: Tick[]) {
+    const byCount = counts.map((c, d) => ({ d, c }));
+    const desc = [...byCount].sort((a, b) => b.c - a.c || a.d - b.d);
+    const asc = [...byCount].sort((a, b) => a.c - b.c || a.d - b.d);
+    const mostDigit = desc[0]?.c > 0 ? desc[0].d : null;
+    const secondMostDigit = desc[1]?.c > 0 ? desc[1].d : null;
+    const leastDigit = asc[0] ? asc[0].d : null;
+    const secondLeastDigit = asc[1] ? asc[1].d : null;
+
+    let trendDigit: number | null = null;
+    const sample = recentTicks.slice(-TREND_WINDOW);
+    if (sample.length >= 10) {
+        const mid = Math.floor(sample.length / 2);
+        const firstHalf = sample.slice(0, mid);
+        const secondHalf = sample.slice(mid);
+        const rate = (half: Tick[], d: number) => half.filter(t => t.digit === d).length / Math.max(1, half.length);
+        let bestDelta = 0;
+        for (let d = 0; d < 10; d++) {
+            const delta = rate(secondHalf, d) - rate(firstHalf, d);
+            if (delta > bestDelta) { bestDelta = delta; trendDigit = d; }
+        }
+    }
+
+    const classOf: string[] = new Array(10).fill('');
+    for (let d = 0; d < 10; d++) {
+        if (d === trendDigit) classOf[d] = 'is-trend';
+        else if (d === mostDigit) classOf[d] = 'is-most';
+        else if (d === leastDigit) classOf[d] = 'is-least';
+        else if (d === secondMostDigit) classOf[d] = 'is-second-most';
+        else if (d === secondLeastDigit) classOf[d] = 'is-second-least';
+    }
+    return classOf;
+}
+
+type SentinelSignal = { type: ContractType; barrier: number; label: string; confidence: number; edge: number };
+
+/**
+ * Ranks a handful of natural contract shapes (Even/Odd, Over/Under each barrier) against the
+ * current analysis window, comparing observed win-rate to the barrier's theoretical baseline.
+ * This surfaces the strongest recent statistical bias — it is descriptive of the sample, not a
+ * guarantee, since these are synthetic, contractually-random indices.
+ */
+function computeSentinelSignal(analysisTicks: Tick[]): SentinelSignal | null {
+    const n = analysisTicks.length;
+    if (n < 20) return null;
+    const counts = new Array(10).fill(0);
+    for (const t of analysisTicks) counts[t.digit]++;
+    const candidates: SentinelSignal[] = [];
+
+    const evenN = counts.reduce((sum, c, d) => sum + (d % 2 === 0 ? c : 0), 0);
+    const oddN = n - evenN;
+    candidates.push({ type: 'DIGITEVEN', barrier: 0, label: 'Even', confidence: 0, edge: evenN / n - 0.5 });
+    candidates.push({ type: 'DIGITODD', barrier: 0, label: 'Odd', confidence: 0, edge: oddN / n - 0.5 });
+
+    for (let b = 1; b <= 9; b++) {
+        const under = counts.slice(0, b).reduce((a, c) => a + c, 0);
+        candidates.push({ type: 'DIGITUNDER', barrier: b, label: 'Under ' + b, confidence: 0, edge: under / n - b / 10 });
+    }
+    for (let b = 0; b <= 8; b++) {
+        const over = counts.slice(b + 1).reduce((a, c) => a + c, 0);
+        candidates.push({ type: 'DIGITOVER', barrier: b, label: 'Over ' + b, confidence: 0, edge: over / n - (9 - b) / 10 });
+    }
+
+    const best = candidates.reduce((a, b) => (b.edge > a.edge ? b : a));
+    if (best.edge <= 0.015) return null;
+    const confidence = Math.max(1, Math.min(97, Math.round(best.edge * 100 * Math.sqrt(n / 40))));
+    return { ...best, confidence };
+}
+
 function labelFor(type: ContractType, barrier: number) {
     if (type === 'CALL') return 'Rise';
     if (type === 'PUT') return 'Fall';
@@ -72,23 +152,27 @@ export default observer(function DTrader() {
 
 
     const live1000 = useMemo(() => (ticks.length > 1000 ? ticks.slice(-1000) : ticks), [ticks]);
+    // `analysis` is the tick slice the person actually selected via the window buttons (20/50/.../1000) —
+    // this drives the digit distribution below instead of always the full 1000-tick buffer.
     const analysis = useMemo(() => ticks.slice(-windowSize), [ticks, windowSize]);
     const { counts, evenCount } = useMemo(() => {
         const next = new Array(10).fill(0) as number[];
         let even = 0;
-        for (let i = 0; i < live1000.length; i++) {
-            const d = live1000[i].digit;
+        for (let i = 0; i < analysis.length; i++) {
+            const d = analysis[i].digit;
             next[d]++;
             if (d % 2 === 0) even++;
         }
         return { counts: next, evenCount: even };
-    }, [live1000]);
-    const total = Math.max(1, live1000.length);
+    }, [analysis]);
+    const total = Math.max(1, analysis.length);
     const evenPct = (evenCount / total) * 100;
     const oddPct = 100 - evenPct;
+    const digitClasses = useMemo(() => classifyDigits(counts, ticks), [counts, ticks]);
+    const sentinelSignal = useMemo(() => computeSentinelSignal(analysis), [analysis]);
     const last = live1000.length ? live1000[live1000.length - 1].digit : null;
     const [pulseDigit, setPulseDigit] = useState<number | null>(null);
-    const pulseTimerRef = useRef<number>();
+    const pulseTimerRef = useRef<number | undefined>(undefined);
     useEffect(() => {
         if (last == null) return;
         setPulseDigit(last);
@@ -214,6 +298,21 @@ export default observer(function DTrader() {
         return () => window.clearInterval(timer);
     }, [openContract?.id]);
 
+    // A resolved contract (won/lost/sold/expired) used to leave the Buy button permanently
+    // disabled because `openContract` was never cleared. Auto-clear it a few seconds after
+    // it resolves so the deck re-arms; the person can also dismiss it immediately.
+    useEffect(() => {
+        if (!openContract || !TERMINAL_STATUSES.includes(openContract.status)) return;
+        const t = window.setTimeout(() => setOpenContract(null), 6000);
+        return () => window.clearTimeout(t);
+    }, [openContract?.status]);
+
+    function applySentinelSignal() {
+        if (!sentinelSignal) return;
+        setType(sentinelSignal.type);
+        if (sentinelSignal.type === 'DIGITOVER' || sentinelSignal.type === 'DIGITUNDER') setBarrier(sentinelSignal.barrier);
+    }
+
     async function connectAccount() {
         try {
             const url = await generateOAuthURL();
@@ -253,6 +352,8 @@ export default observer(function DTrader() {
     }
 
     const filteredMarkets = markets.filter(m => (m.symbol + ' ' + m.name).toLowerCase().includes(search.toLowerCase()));
+    const contractResolved = !!openContract && TERMINAL_STATUSES.includes(openContract.status);
+    const contractPending = !!openContract && !contractResolved;
 
     const chartSettings = useMemo(() => ({ assetInformation: false, countdown: true, isHighestLowestMarkerEnabled: false, language: common.current_language.toLowerCase(), position: ui.is_chart_layout_default ? 'bottom' : 'left', theme: ui.is_dark_mode_on ? 'dark' : 'light' }), [common.current_language, ui.is_chart_layout_default, ui.is_dark_mode_on]);
     const smartChartData = useMemo(() => ({ activeSymbols: chartData.activeSymbols, tradingTimes: chartData.tradingTimes }), [chartData.activeSymbols, chartData.tradingTimes]);
@@ -276,13 +377,13 @@ export default observer(function DTrader() {
                     </section>
 
                     <section className='dtrader__panel'>
-                        <div className='dtrader__panel-head'><strong>0–9 LIVE DIGIT INTELLIGENCE · DERIV 1000 TICKS</strong><div className='dtrader__window'>{[20,50,100,120,500,1000].map(n => <button key={n} className={windowSize === n ? 'active' : ''} onClick={() => setWindowSize(n)}>{n}</button>)}</div></div>
-                        <div className='dtrader__note'>Distribution = last {live1000.length} of the canonical 1000-tick feed · analysis window = {analysis.length}</div>
+                        <div className='dtrader__panel-head'><strong>0–9 LIVE DIGIT INTELLIGENCE</strong><div className='dtrader__window'>{[20,50,100,120,500,1000].map(n => <button key={n} className={windowSize === n ? 'active' : ''} onClick={() => setWindowSize(n)}>{n}</button>)}</div></div>
+                        <div className='dtrader__note'>Distribution over the last {analysis.length} of {windowSize} selected ticks · live buffer holds {live1000.length} / 1000</div>
                         <div className='dtrader__digits' style={last != null ? ({ '--last-index': last } as React.CSSProperties) : undefined}>
                             {counts.map((c, d) => {
                                 const pct = (c / total) * 100;
                                 return (
-                                    <div className={'dtrader__digit' + (d === last ? ' is-last' : '') + (d === pulseDigit ? ' is-pulse' : '')} key={d}>
+                                    <div className={'dtrader__digit ' + digitClasses[d] + (d === last ? ' is-last' : '') + (d === pulseDigit ? ' is-pulse' : '')} key={d}>
                                         <div className='dtrader__digit-ring' style={{ '--pct': pct } as React.CSSProperties}>
                                             <div className='dtrader__digit-ring-inner'><b>{d}</b></div>
                                         </div>
@@ -292,15 +393,45 @@ export default observer(function DTrader() {
                             })}
                             {last != null && <i className='dtrader__digit-marker' />}
                         </div>
-                        <div className='dtrader__metrics'><Metric l='EVEN' v={evenPct.toFixed(1) + '%'} /><Metric l='ODD' v={oddPct.toFixed(1) + '%'} /><Metric l='LAST' v={last == null ? '—' : String(last)} /><Metric l='SAMPLE' v={live1000.length + ' / 1000'} /><Metric l='FEED' v={feedState} /></div>
+                        <div className='dtrader__legend'>
+                            <span className='is-most'>Most frequent</span>
+                            <span className='is-second-most'>2nd most</span>
+                            <span className='is-least'>Least frequent</span>
+                            <span className='is-second-least'>2nd least</span>
+                            <span className='is-trend'>Rising fastest (60t)</span>
+                        </div>
+                        <div className='dtrader__metrics'><Metric l='EVEN' v={evenPct.toFixed(1) + '%'} /><Metric l='ODD' v={oddPct.toFixed(1) + '%'} /><Metric l='LAST' v={last == null ? '—' : String(last)} /><Metric l='SAMPLE' v={analysis.length + ' / ' + windowSize} /><Metric l='FEED' v={feedState} /></div>
                     </section>
 
-                    <section className='dtrader__panel'>
+                    <section className='dtrader__panel dtrader__sentinel'>
                         <div className='dtrader__panel-head'><strong>Sentinel + DigitPulse Intelligence</strong><span className='dtrader__badge'>LIVE DERIV FEED</span></div>
+                        {sentinelSignal ? (
+                            <div className='dtrader__signal'>
+                                <div>
+                                    <small>TOP SIGNAL · {analysis.length}-TICK WINDOW</small>
+                                    <strong>{sentinelSignal.label}</strong>
+                                    <span>{(sentinelSignal.edge * 100).toFixed(1)}pp above baseline</span>
+                                </div>
+                                <div className='dtrader__signal-confidence'><b>{sentinelSignal.confidence}%</b><small>confidence</small></div>
+                                <button onClick={applySentinelSignal}>Apply to deck</button>
+                            </div>
+                        ) : (
+                            <div className='dtrader__signal dtrader__signal--flat'>No signal clears the baseline right now — distribution is close to random.</div>
+                        )}
                         <div className='dtrader__metrics'><Metric l='UNDER 7 SUPPORT' v={psychology.under7.toFixed(1) + '%'} /><Metric l='OVER 2 SUPPORT' v={psychology.over2.toFixed(1) + '%'} /><Metric l='ODD / EVEN' v={psychology.odd.toFixed(1) + ' / ' + psychology.even.toFixed(1)} /><Metric l='DANGER' v={psychology.danger + ' / 100'} /><Metric l='TICKS' v={String(ticks.length)} /></div>
+                        <small className='dtrader__disclaimer'>Statistical bias vs. baseline only — synthetic indices are contractually random and past digits don't guarantee the next one. Manual execution only.</small>
                     </section>
 
-                    {openContract && <section className='dtrader__panel dtrader__open'><div><small>OPEN CONTRACT</small><strong>{openContract.label} · {openContract.id}</strong></div><Metric l='STATUS' v={openContract.status} /><Metric l='P/L' v={Number(openContract.profit || 0).toFixed(2)} /><Metric l='BID' v={Number(openContract.bid || 0).toFixed(2)} /><button onClick={sell} disabled={['won','lost','sold','expired'].includes(openContract.status)}>SELL</button></section>}
+                    {openContract && (
+                        <section className={'dtrader__panel dtrader__open' + (contractResolved ? ' is-resolved is-' + openContract.status : '')}>
+                            <div><small>{contractResolved ? 'CONTRACT ' + openContract.status.toUpperCase() : 'OPEN CONTRACT'}</small><strong>{openContract.label} · {openContract.id}</strong></div>
+                            <Metric l='STATUS' v={openContract.status} />
+                            <Metric l='P/L' v={Number(openContract.profit || 0).toFixed(2)} />
+                            <Metric l='BID' v={Number(openContract.bid || 0).toFixed(2)} />
+                            <button onClick={sell} disabled={contractResolved} title='Close this contract now at the current market price instead of waiting for expiry'>{contractResolved ? 'CLOSED' : 'SELL NOW'}</button>
+                            {contractResolved && <button className='dtrader__dismiss' onClick={() => setOpenContract(null)} aria-label='Dismiss'>×</button>}
+                        </section>
+                    )}
                 </main>
 
                 <aside className='dtrader__panel dtrader__deck'>
@@ -311,7 +442,7 @@ export default observer(function DTrader() {
                     <label>DURATION</label><div className='dtrader__durations'>{[1,2,3,5,10].map(n => <button key={n} className={duration === n ? 'active' : ''} onClick={() => setDuration(n)}>{n}t</button>)}</div>
                     <label>STAKE</label><input type='number' value={stake} min={0.35} step={0.01} onChange={e => setStake(Math.max(0.35, Number(e.target.value)))} />
                     <div className='dtrader__quote'><Metric l='MARKET' v={symbol} /><Metric l='CONTRACT' v={labelFor(type, barrier)} /><Metric l='ASK' v={loading ? '…' : proposal?.ask_price != null ? Number(proposal.ask_price).toFixed(2) : '—'} /><Metric l='PAYOUT' v={proposal?.payout != null ? Number(proposal.payout).toFixed(2) : '—'} /></div>
-                    <button className='dtrader__buy' onClick={client?.is_logged_in ? buy : connectAccount} disabled={client?.is_logged_in ? (!proposal?.id || loading || !!openContract || !isBarrierValid()) : false}>{client?.is_logged_in ? 'BUY ' + labelFor(type, barrier).toUpperCase() : 'CONNECT DERIV ACCOUNT'}</button>
+                    <button className='dtrader__buy' onClick={client?.is_logged_in ? buy : connectAccount} disabled={client?.is_logged_in ? (!proposal?.id || loading || contractPending || !isBarrierValid()) : false}>{client?.is_logged_in ? (contractPending ? 'CONTRACT OPEN…' : 'BUY ' + labelFor(type, barrier).toUpperCase()) : 'CONNECT DERIV ACCOUNT'}</button>
                     {message && <div className='dtrader__message'>{message}</div>}
                     <small>Manual execution only. This cockpit never buys automatically.</small>
                 </aside>

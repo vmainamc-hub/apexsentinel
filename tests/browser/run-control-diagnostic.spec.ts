@@ -2,26 +2,7 @@ import { expect, test } from '@playwright/test';
 
 async function collectRunDiagnostic(page: import('@playwright/test').Page, width: number, height: number) {
     await page.setViewportSize({ width, height });
-    await page.goto('/#bot_builder', { waitUntil: 'domcontentloaded' });
-    const botBuilder = page.locator('.bot-builder.bot-builder--active');
-    const botBuilderTab = page.locator('#id-bot-builder');
-    if (await botBuilder.count() === 0) {
-        await botBuilderTab.waitFor({ state: 'attached', timeout: 20000 });
-        if (!(await botBuilderTab.evaluate(element => element.classList.contains('dc-tabs__active')).catch(() => false))) {
-            await botBuilderTab.click({ force: true });
-        }
-    }
-    await botBuilder.waitFor({ state: 'visible', timeout: 20000 });
-    await page.waitForFunction(() => Boolean(window.Blockly?.derivWorkspace), undefined, { timeout: 20000 });
-
-    const tour = page.locator('.tour-dialog').first();
-    if (await tour.count() > 0 && await tour.isVisible().catch(() => false)) {
-        const skip = tour.getByRole('button', { name: 'Skip', exact: true });
-        if (await skip.count() > 0) {
-            await skip.click();
-            await expect(tour).toBeHidden({ timeout: 5000 });
-        }
-    }
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
 
     const button = page.locator('#db-animation__run-button').first();
     await button.waitFor({ state: 'visible', timeout: 20000 });
