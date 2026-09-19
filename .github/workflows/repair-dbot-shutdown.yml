@@ -1,5 +1,6 @@
 name: Verify DBot shutdown repair
 # Full-chain verification: runtime -> type-check -> production build -> browser regression
+# Final compile-boundary pass
 
 on:
   push:
