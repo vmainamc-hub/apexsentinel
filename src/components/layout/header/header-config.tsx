@@ -87,4 +87,12 @@ export const TRADERS_HUB_LINK_CONFIG = {
 // ];
 //
 // Empty by default for white-labeling
-export const MenuItems: MenuItemsConfig[] = [];
+export const MenuItems: MenuItemsConfig[] = [
+    { as: 'a', href: '/', icon: <TradershubLogo iconSize='xs' />, label: localize('Dashboard') },
+    { as: 'a', href: '/bot-builder', icon: <DerivBotLogo height={18} width={68} />, label: localize('Bot Builder') },
+    { as: 'a', href: '/bot-store', icon: <DerivBotLogo height={18} width={68} />, label: localize('Bot Store') },
+    { as: 'a', href: '/dtrader', icon: <DerivTraderLogo height={18} width={82} />, label: localize('DTrader') },
+    { as: 'a', href: '/sentinel-forge', icon: <DerivTraderLogo height={18} width={82} />, label: localize('Sentinel Forge') },
+    { as: 'a', href: '/charts', icon: <SmarttraderLogo height={18} width={82} />, label: localize('Charts') },
+    { as: 'a', href: '/tutorials', icon: <SmarttraderLogo height={18} width={82} />, label: localize('Tutorials') },
+];
