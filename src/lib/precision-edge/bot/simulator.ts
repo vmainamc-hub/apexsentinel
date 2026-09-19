@@ -195,3 +195,72 @@ export function martingaleSurvival(
   const score = Math.max(0, Math.min(100, 50 + headroom * 18));
   return { survivable: headroom >= 0, headroom, requiredStake, score };
 }
+
+
+export interface EntryDigitSimResult {
+  entryDigit: number;
+  trades: number;
+  wins: number;
+  winRate: number;
+  pnl: number;
+  expectancy: number;
+  longestLossStreak: number;
+  fourWinRuns: number;
+  outOfSample: {
+    trades: number;
+    wins: number;
+    winRate: number;
+    pnl: number;
+    expectancy: number;
+  };
+}
+
+/**
+ * Causal entry-digit replay used by Sentinel's entry-point validation layer.
+ * Each observation is: entry digit printed now -> contract outcome on the next
+ * observed tick. The first half is in-sample and the newest half is OOS.
+ * This is pure replay evidence; it does not modify Sentinel ranking rules.
+ */
+export function simulateAllEntryDigits(
+  digits: number[],
+  side: "OVER" | "UNDER",
+  opts: { collectTrades?: boolean } = {},
+): EntryDigitSimResult[] {
+  const barrier = side === "OVER" ? 2 : 7;
+  const results: EntryDigitSimResult[] = [];
+  const split = Math.floor(digits.length / 2);
+
+  for (let entryDigit = 0; entryDigit <= 9; entryDigit++) {
+    let trades = 0, wins = 0, pnl = 0, lossStreak = 0, longestLossStreak = 0, fourWinRuns = 0, winRun = 0;
+    let oosTrades = 0, oosWins = 0, oosPnl = 0;
+
+    for (let i = 1; i < digits.length; i++) {
+      if (digits[i - 1] !== entryDigit) continue;
+      const win = side === "OVER" ? digits[i] > barrier : digits[i] < barrier;
+      const stake = 1;
+      const tradePnl = win ? 0.4 : -stake;
+      trades++; pnl += tradePnl;
+      if (i >= split) { oosTrades++; oosPnl += tradePnl; if (win) oosWins++; }
+      if (win) { wins++; lossStreak = 0; winRun++; if (winRun === 4) { fourWinRuns++; winRun = 0; } }
+      else { lossStreak++; winRun = 0; longestLossStreak = Math.max(longestLossStreak, lossStreak); }
+    }
+
+    results.push({
+      entryDigit, trades, wins,
+      winRate: trades ? wins / trades : 0,
+      pnl,
+      expectancy: trades ? pnl / trades : 0,
+      longestLossStreak,
+      fourWinRuns,
+      outOfSample: {
+        trades: oosTrades,
+        wins: oosWins,
+        winRate: oosTrades ? oosWins / oosTrades : 0,
+        pnl: oosPnl,
+        expectancy: oosTrades ? oosPnl / oosTrades : 0,
+      },
+    });
+  }
+  void opts;
+  return results;
+}
