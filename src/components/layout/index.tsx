@@ -1,5 +1,6 @@
 // @ts-nocheck — vendored bot code with known upstream type gaps; see AGENTS.md
 import { useEffect, useState } from 'react';
+
 import clsx from 'clsx';
 import { observer } from 'mobx-react-lite';
 import { Outlet } from 'react-router';
@@ -17,6 +18,14 @@ const Layout = observer(() => {
     const store = useStore();
     const is_quick_strategy_active = store?.quick_strategy?.is_open;
     const isCallbackPage = window.location.pathname === '/callback';
+
+    useEffect(() => {
+        let active = true;
+        if (!api_base.api) {
+            void api_base.init().catch(error => console.error('[API] layout initialization failed:', error));
+        }
+        return () => { active = false; void active; };
+    }, []);
 
     const checkClientAccount = JSON.parse(localStorage.getItem('clientAccounts') ?? '{}');
     const getQueryParams = new URLSearchParams(window.location.search);
