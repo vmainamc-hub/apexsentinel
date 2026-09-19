@@ -172,7 +172,7 @@ export default observer(function DTrader() {
     const sentinelSignal = useMemo(() => computeSentinelSignal(analysis), [analysis]);
     const last = live1000.length ? live1000[live1000.length - 1].digit : null;
     const [pulseDigit, setPulseDigit] = useState<number | null>(null);
-    const pulseTimerRef = useRef<number>();
+    const pulseTimerRef = useRef<number | undefined>(undefined);
     useEffect(() => {
         if (last == null) return;
         setPulseDigit(last);
