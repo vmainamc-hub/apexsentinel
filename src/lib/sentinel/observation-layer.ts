@@ -55,7 +55,7 @@ import { DERIV_SYMBOLS } from "@/hooks/useDerivStream";
 
 const SUPPORTED_MARKETS = MARKET_IDS.map((symbol) => ({
   symbol,
-  displayName: DERIV_SYMBOLS.find((m) => m.symbol === symbol)?.displayName || symbol,
+  displayName: DERIV_SYMBOLS.find((m) => m.symbol === symbol)?.name || symbol,
 }));
 import {
   continuousRegimeObserver,
