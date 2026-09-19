@@ -19,7 +19,7 @@
 // distribution discrepancies. Everything now reads the same digit buffer.
 // ═══════════════════════════════════════════════════════════════════════════
 import { derivBus } from "./tick-bus";
-import type { Tick } from "@/lib/analytics";
+import type { Tick } from "./tick-bus";
 
 /** The canonical structural window length, in ticks. */
 export const CANONICAL_TICK_WINDOW = 1000;
