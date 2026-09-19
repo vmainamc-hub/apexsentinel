@@ -8,7 +8,6 @@ const MAX_STORED_EVENTS_PER_CELL = 20;
 const MAX_TOTAL_EVENTS = 300;
 const MAX_QUALIFICATIONS = 50;
 const DEBOUNCE_SAVE_MS = 2000;
-const SUPABASE_THROTTLE_MS = 15_000;
 
 interface LocalStore {
   dossiers: Record<string, ObservationDossier>;
@@ -76,9 +75,6 @@ export class SupabasePersistenceAdapter implements ObservationPersistenceAdapter
     updatedAt: Date.now(),
   };
   private saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-  private lastSupabaseSync = new Map<string, number>();
-  private cachedUserId: string | null = null;
-  private lastAuthCheckAt = 0;
 
   constructor() {
     this.loadFromLocalStorage();
@@ -121,7 +117,9 @@ export class SupabasePersistenceAdapter implements ObservationPersistenceAdapter
     this.memoryStore.updatedAt = Date.now();
     this.scheduleLocalSave();
 
-  }\n\n  async loadDossier(cellId: CellId): Promise<ObservationDossier | null> {
+  }
+
+  async loadDossier(cellId: CellId): Promise<ObservationDossier | null> {
     return this.memoryStore.dossiers[cellId] ?? null;
   }
 
@@ -174,32 +172,6 @@ export class SupabasePersistenceAdapter implements ObservationPersistenceAdapter
     this.memoryStore.updatedAt = Date.now();
     this.scheduleLocalSave();
 
-    // Mirror qualification snapshot to Supabase with rate-limiting
-    const now = Date.now();
-    const lastSync = this.lastSupabaseSync.get(`qual_${snapshot.cellId}`) ?? 0;
-    if (now - lastSync < SUPABASE_THROTTLE_MS) {
-      return;
-    }
-    this.lastSupabaseSync.set(`qual_${snapshot.cellId}`, now);
-
-    try {
-      const userId = await this.getAuthUserId();
-      if (userId) {
-        await supabase.from("apex_market_state").upsert(
-          {
-            symbol: snapshot.marketId,
-            user_id: userId,
-            kind: `obs_qual_${snapshot.cellId}`,
-            model_version: 1,
-            payload: snapshot as unknown as never,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "symbol,kind,user_id" },
-        );
-      }
-    } catch {
-      // Non-blocking sync
-    }
   }
 
   async loadQualification(cellId: CellId): Promise<QualificationSnapshot | null> {
