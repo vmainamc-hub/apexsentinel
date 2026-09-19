@@ -68,7 +68,7 @@ class ExecutionJournal {
     this.listeners.forEach((l) => l());
   }
 
-  recordTrade(record: Omit<ExecutionAuditRecord, "id" | "timestamp" | "executorVersion">): ExecutionAuditRecord {
+  recordTrade(record: Omit<ExecutionAuditRecord, "id" | "timestamp" | "executorVersion"> & Record<string, any>): ExecutionAuditRecord {
     this.init();
     const fullRecord: ExecutionAuditRecord = {
       ...record,
