@@ -74,25 +74,13 @@ export const TRADERS_HUB_LINK_CONFIG = {
 // MENU ITEMS CONFIGURATION PLACEHOLDER
 // ========================================
 //
+// NOTE: this array is intentionally unused. The real desktop nav is
+// src/components/layout/header/menu-items/menu-items.tsx, which links the
+// seven tab-based products (Dashboard/Bot Builder/Bot Store/DTrader/
+// Sentinel Forge/Charts/Tutorials) to their hash routes on '/'. A near-duplicate
+// copy of this list was previously left here pointing at real paths that have
+// no matching react-router route — do not resurrect that version.
+//
 // Add your custom menu items here for the desktop header.
-//
-// EXAMPLE:
-// export const MenuItems: MenuItemsConfig[] = [
-//     {
-//         as: 'a',
-//         href: '/your-page',
-//         icon: <YourIcon />,
-//         label: localize('Your Menu Item'),
-//     },
-// ];
-//
 // Empty by default for white-labeling
-export const MenuItems: MenuItemsConfig[] = [
-    { as: 'a', href: '/', icon: <TradershubLogo iconSize='xs' />, label: localize('Dashboard') },
-    { as: 'a', href: '/bot-builder', icon: <DerivBotLogo height={18} width={68} />, label: localize('Bot Builder') },
-    { as: 'a', href: '/bot-store', icon: <DerivBotLogo height={18} width={68} />, label: localize('Bot Store') },
-    { as: 'a', href: '/dtrader', icon: <DerivTraderLogo height={18} width={82} />, label: localize('DTrader') },
-    { as: 'a', href: '/sentinel-forge', icon: <DerivTraderLogo height={18} width={82} />, label: localize('Sentinel Forge') },
-    { as: 'a', href: '/charts', icon: <SmarttraderLogo height={18} width={82} />, label: localize('Charts') },
-    { as: 'a', href: '/tutorials', icon: <SmarttraderLogo height={18} width={82} />, label: localize('Tutorials') },
-];
+export const MenuItems: MenuItemsConfig[] = [];

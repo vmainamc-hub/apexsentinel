@@ -48,6 +48,7 @@ import './main.scss';
 
 const ChartWrapper = lazy(() => import('../chart/chart-wrapper'));
 const Tutorial = lazy(() => import('../tutorials'));
+const SentinelForge = lazy(() => import('../sentinel-forge'));
 
 const AppWrapper = observer(() => {
     const { connectionStatus } = useApiBase();
@@ -78,9 +79,9 @@ const AppWrapper = observer(() => {
         [key: string]: string;
     };
     const { clear } = summary_card;
-    const { DASHBOARD, BOT_BUILDER, BOT_STORE, DTRADER, CHART, TUTORIAL } = DBOT_TABS;
+    const { DASHBOARD, BOT_BUILDER, BOT_STORE, DTRADER, SENTINEL_FORGE, CHART, TUTORIAL } = DBOT_TABS;
     const init_render = React.useRef(true);
-    const hash = ['dashboard', 'bot_builder', 'bot_store', 'dtrader', 'chart', 'tutorial'];
+    const hash = ['dashboard', 'bot_builder', 'bot_store', 'dtrader', 'sentinel_forge', 'chart', 'tutorial'];
     const { isDesktop, isTablet } = useDevice();
     const location = useLocation();
     const navigate = useNavigate();
@@ -374,6 +375,15 @@ const AppWrapper = observer(() => {
                             <div label='DTrader' id='id-dtrader'>
                                 {active_tab === DTRADER ? <DTrader /> : null}
                             </div>
+                            <div label='Sentinel Forge' id='id-sentinel-forge'>
+                                {active_tab === SENTINEL_FORGE ? (
+                                    <Suspense
+                                        fallback={<ChunkLoader message={localize('Please wait, loading Sentinel Forge...')} />}
+                                    >
+                                        <SentinelForge />
+                                    </Suspense>
+                                ) : null}
+                            </div>
                             <div
                                 label={
                                     <>
@@ -425,7 +435,7 @@ const AppWrapper = observer(() => {
                 </div>
             </div>
             <DesktopWrapper>
-                {active_tab !== DTRADER && (
+                {active_tab !== DTRADER && active_tab !== SENTINEL_FORGE && (
                     <div className='main__run-strategy-wrapper'>
                         {!isTablet && <RunStrategy />}
                         <RunPanel />
@@ -438,7 +448,7 @@ const AppWrapper = observer(() => {
                     </>
                 )}
             </DesktopWrapper>
-            <MobileWrapper>{active_tab !== DTRADER && <RunPanel />}</MobileWrapper>
+            <MobileWrapper>{active_tab !== DTRADER && active_tab !== SENTINEL_FORGE && <RunPanel />}</MobileWrapper>
             <Dialog
                     title={title}
                     is_visible={is_dialog_open}
