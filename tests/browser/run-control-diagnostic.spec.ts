@@ -4,11 +4,12 @@ async function collectRunDiagnostic(page: import('@playwright/test').Page, width
     await page.setViewportSize({ width, height });
     await page.goto('/#bot_builder', { waitUntil: 'domcontentloaded' });
     const botBuilder = page.locator('.bot-builder.bot-builder--active');
-    const botBuilderTab = page.locator('#id-bot-builder');
+    const botBuilderTab = page.locator('#id-bot-builder').count().then(async count => count ? page.locator('#id-bot-builder') : page.locator('.dc-tabs__item', { hasText: 'Bot Builder' }).first());
     if (await botBuilder.count() === 0) {
-        await botBuilderTab.waitFor({ state: 'attached', timeout: 20000 });
-        if (!(await botBuilderTab.evaluate(element => element.classList.contains('dc-tabs__active')).catch(() => false))) {
-            await botBuilderTab.click({ force: true });
+        const tab = await botBuilderTab;
+        await tab.waitFor({ state: 'attached', timeout: 20000 });
+        if (!(await tab.evaluate(element => element.classList.contains('dc-tabs__active')).catch(() => false))) {
+            await tab.click({ force: true });
         }
     }
     await botBuilder.waitFor({ state: 'visible', timeout: 20000 });
