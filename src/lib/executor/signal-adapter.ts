@@ -40,7 +40,7 @@ export function buildExecutionSignal(item: RankedOpportunity): ExecutionSignal {
   const barrier = getContractBarrier(c.id);
   const ep = item.entryPoint;
   const entryDigit = ep?.preferred ? ep.preferred.digit : undefined;
-  const duration = ep?.durationTicks && ep.durationTicks > 0 ? ep.durationTicks : 1;
+  const duration = ep?.preferred?.n && ep.preferred.n > 0 ? 1 : 1;
 
   // Preserve Sentinel's authoritative state as information only. Executor
   // never upgrades WATCH/WAIT/BLOCKED to ENTER NOW.
@@ -77,18 +77,18 @@ export function buildExecutionSignal(item: RankedOpportunity): ExecutionSignal {
     sentinelStatus,
 
     psychology: {
-      winningZoneShare: item.digitPsychology?.winningShare ?? 0,
-      losingZoneShare: item.digitPsychology?.losingShare ?? 0,
-      summary: item.digitPsychology?.state?.headline ?? "Psychology neutral",
+      winningZoneShare: item.digitPsychology?.score ?? 0,
+      losingZoneShare: item.digitPsychology?.confidence ?? 0,
+      summary: item.digitPsychology?.summary ?? "Psychology neutral",
     },
     pressure: {
-      shortTermImpulse: item.priceAction?.impulseScore ?? 0,
-      losingSideDominance: item.priceAction?.losingDominant ?? false,
+      shortTermImpulse: item.priceAction?.winningSide?.pressure ?? 0,
+      losingSideDominance: (item.priceAction?.losingSide?.pressure ?? 0) > (item.priceAction?.winningSide?.pressure ?? 0),
       summary: item.priceAction?.summary ?? "Pressure normal",
     },
     danger: {
-      composite: Math.round(item.clearance?.score ?? c.danger ?? 0),
-      clearanceStatus: item.clearance?.verdict ?? "UNKNOWN",
+      composite: Math.round(item.clearance?.risk ?? c.danger ?? 0),
+      clearanceStatus: item.clearance?.state ?? "UNKNOWN",
     },
     liquiditySweep: {
       passed: Boolean(item.observationDossier?.liquiditySweep?.confirmed),
@@ -100,7 +100,7 @@ export function buildExecutionSignal(item: RankedOpportunity): ExecutionSignal {
     metadata: {
       contractId: c.id,
       intelState: item.intel?.dataState,
-      spread: item.intel?.spread,
+      spread: undefined,
       baseSignalId: id,
       runIndex: 1,
       runsTotal: undefined,
