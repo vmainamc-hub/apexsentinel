@@ -6,7 +6,7 @@ const MAX_BUFFER=1000;
 class DerivTickBus{
  private buffers=new Map<string,Tick[]>(); private digits=new Map<string,number[]>(); private pip=new Map<string,number>(); private refs=new Map<string,number>(); private tickLs=new Set<TickListener>(); private histLs=new Set<HistoryListener>(); private statusLs=new Set<StatusListener>(); private subs=new Map<string,any>(); private status:BusStatus="idle"; private lastEpoch=new Map<string,number>(); private initialized=false;
  getStatus(){return this.status} getTicks(s:string){return [...(this.buffers.get(s)||[])].slice(-MAX_BUFFER)} getDigits(s:string){return [...(this.digits.get(s)||[])].slice(-MAX_BUFFER)} getPipSize(s:string){return this.pip.get(s)??2}
- onTick(cb:TickListener){this.tickLs.add(cb);return()=>this.tickLs.delete(cb)} onHistory(cb:HistoryListener){this.histLs.add(cb); for(const [s,t] of this.buffers) cb(s,[...t]); return()=>this.histLs.delete(cb)} onStatus(cb:StatusListener){this.statusLs.add(cb);cb(this.status);return()=>this.statusLs.delete(cb)}
+ onTick(cb:TickListener){this.tickLs.add(cb);return()=>{this.tickLs.delete(cb)}} onHistory(cb:HistoryListener){this.histLs.add(cb); for(const [s,t] of this.buffers) cb(s,[...t]); return()=>{this.histLs.delete(cb)}} onStatus(cb:StatusListener){this.statusLs.add(cb);cb(this.status);return()=>{this.statusLs.delete(cb)}}
  private setStatus(s:BusStatus){if(this.status===s)return;this.status=s;this.statusLs.forEach(f=>f(s))}
  private digit(s:string,p:number){const f=Math.pow(10,this.getPipSize(s));return Math.abs(Math.round(p*f))%10}
  private setBuffer(s:string,t:Tick[]){const x=t.slice(-MAX_BUFFER);this.buffers.set(s,x);this.digits.set(s,x.map(v=>this.digit(s,v.price)));this.lastEpoch.set(s,x.length?Math.floor(x[x.length-1].t/1000):0)}
