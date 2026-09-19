@@ -1,40 +1,66 @@
-import { observer } from 'mobx-react-lite';
-import { useLocation } from 'react-router';
-import { localize } from '@deriv-com/translations';
-import './menu-items.scss';
+// ========================================
+// MENU ITEMS PLACEHOLDER FOR WHITE-LABELING
+// ========================================
+//
+// This component is intentionally a no-op. The app's one real navigation is
+// the tab bar in src/pages/main/main.tsx (Dashboard | Bot Builder | Bot Store
+// | DTrader | Sentinel Forge | Charts | Tutorials). A duplicate copy of that
+// same list was previously rendered here as a second header row during the
+// Sentinel Forge integration — do not resurrect it; it produces two stacked
+// navigation layers showing the same links. See git history of this file at
+// commit 655245c for the original (pre-integration) version this restores.
+//
+// Third-party developers can add custom menu items here.
+//
+// EXAMPLE USAGE:
+// --------------
+// import { observer } from 'mobx-react-lite';
+// import { useStore } from '@/hooks/useStore';
+// import { useTranslations } from '@deriv-com/translations';
+// import { MenuItem, Text } from '@deriv-com/ui';
+//
+// export const MenuItems = observer(() => {
+//     const { localize } = useTranslations();
+//     const store = useStore();
+//     const is_logged_in = store?.client?.is_logged_in ?? false;
+//
+//     if (!is_logged_in) return null;
+//
+//     return (
+//         <>
+//             <MenuItem
+//                 as='a'
+//                 className='app-header__menu'
+//                 href='/your-page'
+//                 leftComponent={YourIcon}
+//             >
+//                 <Text>{localize('Your Menu Item')}</Text>
+//             </MenuItem>
+//         </>
+//     );
+// });
+//
+// For mobile menu items, see:
+// src/components/layout/header/mobile-menu/use-mobile-menu-config.tsx
 
-// All seven products are tabs rendered inside the single '/' route by
-// src/pages/main/main.tsx, selected via a URL hash (see the 'hash' array
-// there: dashboard | bot_builder | bot_store | dtrader | sentinel_forge |
-// chart | tutorial). Linking any of them to a real path like '/dtrader' 404s,
-// because the router only registers '/' and '/preview' — there is no
-// standalone route per product.
-const items = [
-    { hash: 'dashboard', label: localize('Dashboard') },
-    { hash: 'bot_builder', label: localize('Bot Builder') },
-    { hash: 'bot_store', label: localize('Bot Store') },
-    { hash: 'dtrader', label: localize('DTrader') },
-    { hash: 'sentinel_forge', label: localize('Sentinel Forge') },
-    { hash: 'chart', label: localize('Charts') },
-    { hash: 'tutorial', label: localize('Tutorials') },
-];
+import { observer } from 'mobx-react-lite';
 
 export const MenuItems = observer(() => {
-    const location = useLocation();
-    const isActive = (item: (typeof items)[number]) =>
-        location.pathname === '/' && (location.hash.replace('#', '') || 'dashboard') === item.hash;
-
-    return (
-        <nav className='sentinel-main-nav' aria-label='Main navigation'>
-            {items.map(item => (
-                <a key={item.hash} href={'/#' + item.hash} aria-current={isActive(item) ? 'page' : undefined}>
-                    {item.label}
-                </a>
-            ))}
-        </nav>
-    );
+    // No menu items by default - add your custom menu items here
+    return null;
 });
-export const TradershubLink=observer(()=>null);
-type MenuItemsType=typeof MenuItems & {TradershubLink:typeof TradershubLink};
-(MenuItems as MenuItemsType).TradershubLink=TradershubLink;
+
+export const TradershubLink = observer(() => {
+    // No default Traders Hub link - add your custom navigation here if needed
+    return null;
+});
+
+// Create a namespace for MenuItems to include TradershubLink
+type MenuItemsType = typeof MenuItems & {
+    TradershubLink: typeof TradershubLink;
+};
+
+// Assign TradershubLink to MenuItems
+(MenuItems as MenuItemsType).TradershubLink = TradershubLink;
+
 export default MenuItems as MenuItemsType;
