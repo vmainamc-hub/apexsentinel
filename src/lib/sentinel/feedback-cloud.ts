@@ -78,7 +78,7 @@ export async function startFeedbackSync(): Promise<void> {
   const { data: rows, error } = await supabase
     .from("sentinel_operator_feedback")
     .select("kind,item_id,payload")
-    .eq("user_id", userId);
+    .eq("user_id", userId).limit(10000);
 
   if (error) {
     phase = "ERROR";
