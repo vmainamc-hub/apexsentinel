@@ -201,8 +201,6 @@ export const DEFAULT_RISK_SETTINGS: RiskSettings = {
   resetAfterTargetProfit: true,
   resetAfterStopLoss: true,
   martingaleMode: "SPLIT",
-  martingaleSplit: 2,
-  payoutPercent: 50,
 
   targetProfit: 10.0,
   stopLoss: 5.0,
