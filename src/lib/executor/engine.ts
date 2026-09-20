@@ -1,10 +1,8 @@
 import { api_base } from "@/external/bot-skeleton";
 import { derivBus } from "@/lib/deriv/tick-bus";
-import { riskManager } from "./risk-manager";
 import { executionJournal } from "./execution-journal";
-import { calculateStake } from "./stake-calculator";
 import { validateSignalStructure } from "./signal-adapter";
-import type { ExecutionMode,ExecutionTrigger,ExecutorStatus,ExecutionSignal,RiskSettings,OpenContract,SignalQueueItem,SignalQueueState,AutoExecutionState,SessionState,GateEvaluationResult } from "./types";
+import type { ExecutionMode,ExecutionTrigger,ExecutorStatus,ExecutionSignal,RiskSettings,OpenContract,SignalQueueItem,AutoExecutionState,SessionState,GateEvaluationResult } from "./types";
 import { DEFAULT_RISK_SETTINGS } from "./types";
 
 export interface AccountSession { loginid:string; currency:string; balance:number; isVirtual:boolean; connected:boolean; }
