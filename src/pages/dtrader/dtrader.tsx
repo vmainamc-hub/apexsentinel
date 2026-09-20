@@ -140,7 +140,7 @@ export default observer(function DTrader() {
     const [ticks, setTicks] = useState<Tick[]>([]);
     const [type, setType] = useState<ContractType>('DIGITUNDER');
     const [barrier, setBarrier] = useState(6);
-    const [duration, setDuration] = useState(5);
+    const [duration, setDuration] = useState(1);
     const [stake, setStake] = useState(10);
     const [proposal, setProposal] = useState<any>(null);
     const [openContract, setOpenContract] = useState<any>(null);
@@ -467,10 +467,10 @@ export default observer(function DTrader() {
                     <label>CONTRACT</label>
                     <div className='dtrader__contracts'>{CONTRACTS.map(c => <button key={c.id} className={type === c.id ? 'active' : ''} onClick={() => setType(c.id)}>{c.label}</button>)}</div>
                     {['DIGITOVER','DIGITUNDER','DIGITMATCH','DIGITDIFF','HIGHER','LOWER','TOUCH','NOTOUCH'].includes(type) && <><label>{type.startsWith('DIGIT') ? 'DIGIT / BARRIER' : 'BARRIER'}</label><input type='number' value={barrier} min={0} max={9} onChange={e => setBarrier(Number(e.target.value))} /></>}
-                    <label>DURATION</label><div className='dtrader__durations'>{[1,2,3,5,10].map(n => <button key={n} className={duration === n ? 'active' : ''} onClick={() => setDuration(n)}>{n}t</button>)}</div>
+                    <label>DERIV DURATION TICKS</label><div className='dtrader__durations'>{[1,2,3,4,5].map(n => <button key={n} className={duration === n ? 'active' : ''} onClick={() => setDuration(n)}>{n}t</button>)}</div>
                     <label>STAKE</label><input type='number' value={stake} min={0.35} step={0.01} onChange={e => setStake(Math.max(0.35, Number(e.target.value)))} />
                     <div className='dtrader__quote'><Metric l='MARKET' v={symbol} /><Metric l='CONTRACT' v={labelFor(type, barrier)} /><Metric l='ASK' v={loading ? '…' : proposal?.ask_price != null ? Number(proposal.ask_price).toFixed(2) : '—'} /><Metric l='PAYOUT' v={proposal?.payout != null ? Number(proposal.payout).toFixed(2) : '—'} /></div>
-                    <button className='dtrader__buy' onClick={client?.is_logged_in ? buy : connectAccount} disabled={client?.is_logged_in ? (!proposal?.id || loading || contractPending || !isBarrierValid()) : false}>{client?.is_logged_in ? (contractPending ? 'CONTRACT OPEN…' : 'BUY ' + labelFor(type, barrier).toUpperCase()) : 'CONNECT DERIV ACCOUNT'}</button>
+                    <button className='dtrader__buy' onClick={client?.is_logged_in ? buy : connectAccount} disabled={client?.is_logged_in ? (!proposal?.id || loading || !isBarrierValid()) : false}>{client?.is_logged_in ? ('RUN ' + labelFor(type, barrier).toUpperCase()) : 'CONNECT DERIV ACCOUNT'}</button>
                     {message && <div className='dtrader__message'>{message}</div>}
                     <small>Manual execution only. This cockpit never buys automatically.</small>
                 </aside>
