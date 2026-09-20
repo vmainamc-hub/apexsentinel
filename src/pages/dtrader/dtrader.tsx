@@ -384,11 +384,6 @@ export default observer(function DTrader() {
     }
 
     const filteredMarkets = markets.filter(m => (m.symbol + ' ' + m.name).toLowerCase().includes(search.toLowerCase()));
-    const contractResolved = !!openContract && TERMINAL_STATUSES.includes(openContract.status);
-    // A stale contract (poll failed repeatedly or hit the safety timeout) unlocks the deck the
-    // same as a resolved one would — the person can still dismiss and keep trading even if we
-    // never heard a final status back from Deriv.
-    const contractPending = !!openContract && !contractResolved && !openContract.stale;
 
     const chartSettings = useMemo(() => ({ assetInformation: false, countdown: true, isHighestLowestMarkerEnabled: false, language: common.current_language.toLowerCase(), position: ui.is_chart_layout_default ? 'bottom' : 'left', theme: ui.is_dark_mode_on ? 'dark' : 'light' }), [common.current_language, ui.is_chart_layout_default, ui.is_dark_mode_on]);
     const smartChartData = useMemo(() => ({ activeSymbols: chartData.activeSymbols, tradingTimes: chartData.tradingTimes }), [chartData.activeSymbols, chartData.tradingTimes]);
@@ -457,14 +452,22 @@ export default observer(function DTrader() {
                         <small className='dtrader__disclaimer'>Statistical bias vs. baseline only — synthetic indices are contractually random and past digits don't guarantee the next one. Manual execution only.</small>
                     </section>
 
-                    {openContract && (
-                        <section className={'dtrader__panel dtrader__open' + (contractResolved ? ' is-resolved is-' + openContract.status : '') + (openContract.stale ? ' is-stale' : '')}>
-                            <div><small>{contractResolved ? 'CONTRACT ' + openContract.status.toUpperCase() : openContract.stale ? 'STATUS UNKNOWN' : 'OPEN CONTRACT'}</small><strong>{openContract.label} · {openContract.id}</strong></div>
-                            <Metric l='STATUS' v={openContract.status} />
-                            <Metric l='P/L' v={Number(openContract.profit || 0).toFixed(2)} />
-                            <Metric l='BID' v={Number(openContract.bid || 0).toFixed(2)} />
-                            <button onClick={sell} disabled={contractResolved} title='Close this contract now at the current market price instead of waiting for expiry'>{contractResolved ? 'CLOSED' : 'SELL NOW'}</button>
-                            {(contractResolved || openContract.stale) && <button className='dtrader__dismiss' onClick={() => setOpenContract(null)} aria-label='Dismiss'>×</button>}
+                    {openContracts.length > 0 && (
+                        <section className='dtrader__panel dtrader__open-list'>
+                            <div className='dtrader__open-list-title'><small>OPEN CONTRACTS</small></div>
+                            {openContracts.map(oc => {
+                                const resolved = TERMINAL_STATUSES.includes(oc.status);
+                                return (
+                                    <div key={oc.id} className={'dtrader__open' + (resolved ? ' is-resolved is-' + oc.status : '') + (oc.stale ? ' is-stale' : '')}>
+                                        <div><small>{resolved ? 'CONTRACT ' + oc.status.toUpperCase() : oc.stale ? 'STATUS UNKNOWN' : 'OPEN CONTRACT'}</small><strong>{oc.label} · {oc.id}</strong></div>
+                                        <Metric l='STATUS' v={oc.status} />
+                                        <Metric l='P/L' v={Number(oc.profit || 0).toFixed(2)} />
+                                        <Metric l='BID' v={Number(oc.bid || 0).toFixed(2)} />
+                                        <button onClick={() => sell(oc.id)} disabled={resolved} title='Close this contract now at the current market price instead of waiting for expiry'>{resolved ? 'CLOSED' : 'SELL NOW'}</button>
+                                        {(resolved || oc.stale) && <button className='dtrader__dismiss' onClick={() => setOpenContracts(prev => prev.filter(x => x.id !== oc.id))} aria-label='Dismiss'>×</button>}
+                                    </div>
+                                );
+                            })}
                         </section>
                     )}
                 </main>
