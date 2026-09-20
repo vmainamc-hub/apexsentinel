@@ -93,7 +93,10 @@ class ApexCore {
   private pendingCycle = false;
   /** Rolling average cost of one cycle (ms) — drives adaptive back-off. */
   private avgCycleMs = 0;
+  private persistent = true;
 
+
+  constructor() { this.refs = 1; this.start(); }
 
   /** Deep digit history for a market (up to 5000 ticks). */
   getDeepDigits(symbol: string): number[] {
@@ -160,7 +163,7 @@ class ApexCore {
    */
   release(): void {
     this.refs = Math.max(0, this.refs - 1);
-    if (this.refs === 0) {
+    if (this.refs === 0 && !this.persistent) {
       this.stop();
     }
   }
