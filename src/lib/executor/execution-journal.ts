@@ -140,6 +140,7 @@ class ExecutionJournal {
     update: {
       settlementSpot?: number;
       sellPrice?: number;
+      exitDigit?: number;
       result: "WIN" | "LOSS" | "SOLD" | "CANCELLED";
       pnl: number;
       durationMs?: number;
@@ -150,6 +151,7 @@ class ExecutionJournal {
     if (item) {
       item.settlementSpot = update.settlementSpot ?? item.settlementSpot;
       item.sellPrice = update.sellPrice;
+      item.exitDigit = update.exitDigit ?? item.exitDigit;
       item.result = update.result;
       item.pnl = update.pnl;
       item.durationMs = update.durationMs;
