@@ -302,11 +302,11 @@ export default observer(function DTrader() {
     const openContractsRef = useRef<any[]>([]);
     useEffect(() => { openContractsRef.current = openContracts; }, [openContracts]);
     useEffect(() => {
-        if (!chart_api.api?.send) return;
         const failureCounts = new Map<number, number>();
         const startTimes = new Map<number, number>();
         const STALL_TIMEOUT_MS = 3 * 60 * 1000;
         const timer = window.setInterval(async () => {
+            if (!chart_api.api?.send) return;
             const pending = openContractsRef.current.filter(c => !TERMINAL_STATUSES.includes(c.status) && !c.stale);
             for (const c of pending) {
                 if (!startTimes.has(c.id)) startTimes.set(c.id, Date.now());
@@ -459,9 +459,27 @@ export default observer(function DTrader() {
                             <span className='is-trend'>Rising fastest (60t)</span>
                         </div>
                         <div className='dtrader__metrics'><Metric l='EVEN' v={evenPct.toFixed(1) + '%'} /><Metric l='ODD' v={oddPct.toFixed(1) + '%'} /><Metric l='LAST' v={last == null ? '—' : String(last)} /><Metric l='SAMPLE' v={analysis.length + ' / ' + windowSize} /><Metric l='FEED' v={feedState} /></div>
-                        <div className='dtrader__quick-run'>
-                            <div><small>NEXT TRADE</small><strong>{labelFor(type, barrier)} · {duration}t · {stake}</strong></div>
-                            <button className='dtrader__buy' onClick={client?.is_logged_in ? buy : connectAccount} disabled={client?.is_logged_in ? (loading || !isBarrierValid()) : false}>{client?.is_logged_in ? ('RUN ' + labelFor(type, barrier).toUpperCase()) : 'CONNECT DERIV ACCOUNT'}</button>
+                        <div className='dtrader__inline-deck'>
+                            <label>MARKET</label>
+                            <button type='button' className='dt-market-picker' disabled={!markets.length} onClick={() => setMarketOpen(v => !v)}>
+                                <b>{symbol}</b><span>{selectedMarket?.name || (markets.length ? 'Loading market…' : 'Waiting for live markets…')}</span><em>⌄</em>
+                            </button>
+                            <label>CONTRACT</label>
+                            <div className='dtrader__contracts'>{CONTRACTS.map(c => <button key={c.id} type='button' className={type === c.id ? 'active' : ''} onClick={() => setType(c.id)}>{c.label}</button>)}</div>
+                            {['DIGITOVER','DIGITUNDER','DIGITMATCH','DIGITDIFF','HIGHER','LOWER','TOUCH','NOTOUCH'].includes(type) && <><label>{type.startsWith('DIGIT') ? 'DIGIT / BARRIER' : 'BARRIER'}</label><input type='number' value={barrier} min={0} max={9} onChange={e => setBarrier(Number(e.target.value))} /></>}
+                            <label>DERIV DURATION TICKS</label>
+                            <div className='dtrader__durations'>{[1,2,3,4,5].map(n => <button key={n} type='button' className={duration === n ? 'active' : ''} onClick={() => setDuration(n)}>{n}t</button>)}</div>
+                            <label>STAKE</label>
+                            <input type='number' value={stake} min={0.35} step={0.01} onChange={e => setStake(Math.max(0.35, Number(e.target.value)))} />
+                            <div className='dtrader__quote'>
+                                <Metric l='MARKET' v={symbol} /><Metric l='CONTRACT' v={labelFor(type, barrier)} />
+                                <Metric l='ASK' v={loading ? '…' : proposal?.ask_price != null ? Number(proposal.ask_price).toFixed(2) : '—'} />
+                                <Metric l='PAYOUT' v={proposal?.payout != null ? Number(proposal.payout).toFixed(2) : '—'} />
+                            </div>
+                            <button className='dtrader__buy' onClick={client?.is_logged_in ? buy : connectAccount} disabled={client?.is_logged_in ? (loading || !isBarrierValid()) : false}>
+                                {client?.is_logged_in ? ('RUN ' + labelFor(type, barrier).toUpperCase()) : 'CONNECT DERIV ACCOUNT'}
+                            </button>
+                            {message && <div className='dtrader__message'>{message}</div>}
                         </div>
                     </section>
 
