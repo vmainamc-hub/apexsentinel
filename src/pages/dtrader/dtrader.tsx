@@ -143,12 +143,14 @@ export default observer(function DTrader() {
     const [duration, setDuration] = useState(1);
     const [stake, setStake] = useState(10);
     const [proposal, setProposal] = useState<any>(null);
-    const [openContract, setOpenContract] = useState<any>(null);
+    const [openContracts, setOpenContracts] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState('');
     const [windowSize, setWindowSize] = useState(1000);
     const [feedState, setFeedState] = useState('CONNECTING');
     const [message, setMessage] = useState('');
+    const [entryDigit, setEntryDigit] = useState<number | ''>('');
+    const [armed, setArmed] = useState(false);
 
 
     const live1000 = useMemo(() => (ticks.length > 1000 ? ticks.slice(-1000) : ticks), [ticks]);
@@ -284,53 +286,59 @@ export default observer(function DTrader() {
         return () => { cancelled = true; window.clearTimeout(timer); };
     }, [client?.is_logged_in, client?.currency, symbol, type, barrier, duration, stake]);
 
-    // Poll the contract status every second until it settles. Two safety nets were missing
-    // before: (1) a failed poll was silently swallowed forever, so a transient API hiccup left
-    // the Buy button stuck on "CONTRACT OPEN…" with zero feedback and no way to recover, and
-    // (2) there was no upper bound on how long we'd wait, so a contract that never reports a
-    // terminal status (e.g. the account's `proposal_open_contract` snapshot stalls) locked the
-    // whole trade deck indefinitely. Both are handled below: repeated failures surface a message
-    // and unlock a manual dismiss, and a hard timeout force-clears the lock either way.
-    const pollFailuresRef = useRef(0);
+    // Poll every open, unresolved contract's status once a second. This used to lock the whole
+    // Buy button on a single open contract until it settled. Contracts are now tracked independently.
+    const openContractsRef = useRef<any[]>([]);
+    useEffect(() => { openContractsRef.current = openContracts; }, [openContracts]);
     useEffect(() => {
-        if (!openContract?.id || !chart_api.api?.send) return;
-        pollFailuresRef.current = 0;
-        const startedAt = Date.now();
-        const STALL_TIMEOUT_MS = 3 * 60 * 1000; // never let a single contract lock the deck for more than 3 minutes
+        if (!chart_api.api?.send) return;
+        const failureCounts = new Map<number, number>();
+        const startTimes = new Map<number, number>();
+        const STALL_TIMEOUT_MS = 3 * 60 * 1000;
         const timer = window.setInterval(async () => {
-            try {
-                const res = await chart_api.api.send({ proposal_open_contract: 1, contract_id: openContract.id });
-                const c = res?.proposal_open_contract;
-                if (res?.error) throw new Error(res.error.message || 'Contract status request failed');
-                pollFailuresRef.current = 0;
-                if (!c) return;
-                setOpenContract((p: any) => p ? { ...p, status: c.status, profit: Number(c.profit || 0), bid: Number(c.bid_price || 0), payout: Number(c.payout || 0), stale: false } : p);
-                if (c.is_sold || c.is_expired || ['won', 'lost', 'sold', 'expired'].includes(c.status)) window.clearInterval(timer);
-            } catch (e: any) {
-                pollFailuresRef.current += 1;
-                if (pollFailuresRef.current >= 5) {
-                    setMessage('Losing connection to this contract’s status — check Reports in your Deriv account. You can dismiss this and keep trading.');
-                    setOpenContract((p: any) => (p ? { ...p, stale: true } : p));
-                }
-            } finally {
-                if (Date.now() - startedAt > STALL_TIMEOUT_MS) {
-                    window.clearInterval(timer);
-                    setMessage('This contract has been open for a while and stopped reporting updates — check Reports in your Deriv account. Dismissed so you can keep trading.');
-                    setOpenContract((p: any) => (p ? { ...p, stale: true } : p));
+            const pending = openContractsRef.current.filter(c => !TERMINAL_STATUSES.includes(c.status) && !c.stale);
+            for (const c of pending) {
+                if (!startTimes.has(c.id)) startTimes.set(c.id, Date.now());
+                try {
+                    const res = await chart_api.api.send({ proposal_open_contract: 1, contract_id: c.id });
+                    const pc = res?.proposal_open_contract;
+                    if (res?.error) throw new Error(res.error.message || 'Contract status request failed');
+                    failureCounts.set(c.id, 0);
+                    if (!pc) continue;
+                    setOpenContracts(prev => prev.map(x => x.id === c.id ? { ...x, status: pc.status, profit: Number(pc.profit || 0), bid: Number(pc.bid_price || 0), payout: Number(pc.payout || 0), stale: false } : x));
+                } catch {
+                    const n = (failureCounts.get(c.id) || 0) + 1;
+                    failureCounts.set(c.id, n);
+                    if (n >= 5) {
+                        setMessage('Losing connection to a contract’s status — check Reports in your Deriv account.');
+                        setOpenContracts(prev => prev.map(x => x.id === c.id ? { ...x, stale: true } : x));
+                    }
+                } finally {
+                    if (Date.now() - (startTimes.get(c.id) || Date.now()) > STALL_TIMEOUT_MS) {
+                        setOpenContracts(prev => prev.map(x => x.id === c.id ? { ...x, stale: true } : x));
+                    }
                 }
             }
         }, 1000);
         return () => window.clearInterval(timer);
-    }, [openContract?.id]);
+    }, []);
 
-    // A resolved contract (won/lost/sold/expired) used to leave the Buy button permanently
-    // disabled because `openContract` was never cleared. Auto-clear it a few seconds after
-    // it resolves so the deck re-arms; the person can also dismiss it immediately.
     useEffect(() => {
-        if (!openContract || !TERMINAL_STATUSES.includes(openContract.status)) return;
-        const t = window.setTimeout(() => setOpenContract(null), 6000);
+        const settled = openContracts.filter(c => TERMINAL_STATUSES.includes(c.status) || c.stale);
+        if (!settled.length) return;
+        const t = window.setTimeout(() => {
+            setOpenContracts(prev => prev.filter(x => !(TERMINAL_STATUSES.includes(x.status) || x.stale)));
+        }, 6000);
         return () => window.clearTimeout(t);
-    }, [openContract?.status]);
+    }, [openContracts]);
+
+    useEffect(() => {
+        if (!armed || entryDigit === '' || !ticks.length) return;
+        const last = ticks[ticks.length - 1];
+        if (last.digit !== entryDigit) return;
+        setArmed(false);
+        void buy();
+    }, [ticks, armed, entryDigit]);
 
     function applySentinelSignal() {
         if (!sentinelSignal) return;
@@ -354,18 +362,17 @@ export default observer(function DTrader() {
             const res = await chart_api.api.send({ buy: proposal.id, price: Number(proposal.ask_price) });
             const id = Number(res?.buy?.contract_id);
             if (!id) throw new Error(res?.error?.message || 'Deriv did not return a contract ID.');
-            setOpenContract({ id, label: labelFor(type, barrier), status: 'open', profit: 0, bid: Number(proposal.ask_price) });
+            setOpenContracts(prev => [{ id, label: labelFor(type, barrier), status: 'open', profit: 0, bid: Number(proposal.ask_price) }, ...prev].slice(0, 20));
             setMessage('Contract purchased: ' + id);
         } catch (e: any) {
             setMessage(e?.message || 'Purchase failed.');
         }
     }
 
-    async function sell() {
-        if (!openContract?.id) return;
+    async function sell(contractId: number) {
         try {
-            await chart_api.api.send({ sell: openContract.id, price: 0 });
-            setMessage('Sell request sent for contract ' + openContract.id);
+            await chart_api.api.send({ sell: contractId, price: 0 });
+            setMessage('Sell request sent for contract ' + contractId);
         } catch (e: any) { setMessage(e?.message || 'Sell request failed.'); }
     }
 

@@ -52,7 +52,7 @@
 .queue>div{display:grid;grid-template-columns:1.5fr 1fr .8fr;padding:9px 0;border-bottom:1px solid var(--sf-border);font-size:12px}
 .queue b{font-size:10px}
 .queue{max-height:240px;overflow:auto}
-@media(max-width:900px){.forge-grid{grid-template-columns:1fr}.forge-card.wide{grid-column:auto}.forge-head{align-items:flex-start;flex-direction:column}.metrics{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){.forge-grid{grid-template-columns:1fr}.forge-card.wide{grid-column:auto}.forge-head{align-items:flex-start;flex-direction:column}.metrics{grid-template-columns:repeat(2,1fr)}.field-pair{grid-template-columns:1fr}.txn-row{grid-template-columns:1fr 1fr 1fr}.txn-row span:nth-child(3),.txn-row span:nth-child(4){display:none}}
 .sentinel-forge .forge-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .sentinel-forge label{display:flex;flex-direction:column;gap:6px;margin:0 0 12px;color:var(--sf-muted);font-size:11px;font-weight:700;letter-spacing:.05em}
 .sentinel-forge input,.sentinel-forge select{width:100%;box-sizing:border-box;border:1px solid var(--sf-border);background:#fff;color:var(--sf-text);border-radius:9px;padding:10px 11px;font:inherit;font-size:13px;outline:none}
@@ -62,3 +62,12 @@
 .sentinel-forge .contract-list{display:grid;gap:8px}.sentinel-forge .contract-list>div{display:grid;grid-template-columns:1.1fr 1.4fr 1.1fr .7fr;gap:10px;align-items:center;padding:11px 12px;border:1px solid var(--sf-border);border-radius:9px;background:#fff}.sentinel-forge .profit,.sentinel-forge .win{color:var(--sf-success)}.sentinel-forge .loss{color:var(--sf-danger)}
 .sentinel-forge .table-wrap{overflow:auto;border:1px solid var(--sf-border);border-radius:10px;background:#fff}.sentinel-forge table{width:100%;border-collapse:collapse;min-width:920px;font-size:12px}.sentinel-forge th{position:sticky;top:0;background:#f7f9fb;color:var(--sf-muted);text-align:left;font-size:10px;letter-spacing:.06em;padding:10px;border-bottom:1px solid var(--sf-border)}.sentinel-forge td{padding:10px;border-bottom:1px solid #eef1f4;white-space:nowrap}.sentinel-forge tbody tr:last-child td{border-bottom:0}.sentinel-forge .empty-cell{text-align:center;color:var(--sf-muted);padding:28px}.sentinel-forge .forge-error{margin-top:10px;padding:10px;border-radius:9px;background:#fff2f3;color:var(--sf-danger);border:1px solid rgba(230,70,90,.2);font-size:12px}
 @media (max-width:900px){.sentinel-forge .forge-two{grid-template-columns:1fr}.sentinel-forge .contract-list>div{grid-template-columns:1fr 1fr}.sentinel-forge{padding:14px}.sentinel-forge .forge-head{gap:12px;flex-direction:column;align-items:flex-start}}
+
+.field-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.recovery-banner{margin:12px 0;padding:9px 12px;background:rgba(245,165,36,.1);border:1px solid rgba(245,165,36,.4);border-radius:8px;font-size:11px;font-weight:700;color:#9a6400}
+.txn-table{max-height:340px;overflow:auto;font-size:12px}
+.txn-row{display:grid;grid-template-columns:1fr 1.1fr 1.3fr .8fr .9fr .9fr;gap:6px;padding:9px 4px;border-bottom:1px solid var(--sf-border);align-items:center}
+.txn-head{position:sticky;top:0;background:var(--sf-surface);font-size:10px;letter-spacing:.06em;color:var(--sf-muted);font-weight:700;z-index:1}
+.txn-row.is-win{background:rgba(23,167,104,.06)}
+.txn-row.is-loss{background:rgba(230,70,90,.06)}
+.txn-row.is-rejected{opacity:.6}

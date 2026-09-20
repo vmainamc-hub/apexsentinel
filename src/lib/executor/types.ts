@@ -140,15 +140,6 @@ export interface RiskSettings {
   duration?: number;
   durationUnit?: "t" | "s" | "m";
 
-  // Forge execution controls
-  entryExecutionMode: EntryExecutionMode;
-  signalExecutionMode: SignalExecutionMode;
-  recoveryExecutionMode: RecoveryExecutionMode;
-  overRecoveryDigit: number;
-  underRecoveryDigit: number;
-  defaultOverEntryDigit: number;
-  defaultUnderEntryDigit: number;
-
   // Split martingale / Recovery
   martingaleEnabled: boolean;
   baseStake: number;
@@ -209,6 +200,9 @@ export const DEFAULT_RISK_SETTINGS: RiskSettings = {
   resetAfterWin: true,
   resetAfterTargetProfit: true,
   resetAfterStopLoss: true,
+  martingaleMode: "SPLIT",
+  martingaleSplit: 2,
+  payoutPercent: 50,
 
   targetProfit: 10.0,
   stopLoss: 5.0,
@@ -231,16 +225,13 @@ export const DEFAULT_RISK_SETTINGS: RiskSettings = {
   minScore: 0, // Executor does not filter by Sentinel score by default
   minConfidence: 0, // Executor does not filter by Sentinel confidence by default
   riskPreset: "BALANCED",
-  entryExecutionMode: "INSTANT",
-  signalExecutionMode: "ONE_PER_SIGNAL",
-  recoveryExecutionMode: "NEXT_SIGNAL",
-  overRecoveryDigit: 3,
-  underRecoveryDigit: 6,
-  defaultOverEntryDigit: 4,
-  defaultUnderEntryDigit: 5,
-  /** @deprecated Forge no longer uses a fixed run count. */
-  runsPerSignal: 1,
-  recoveryDigit: null,
+  recoveryDigitOver: 3,
+  recoveryDigitUnder: 6,
+  defaultEntryDigitOver: 4,
+  defaultEntryDigitUnder: 5,
+  entryMode: "WAIT_FOR_ENTRY_DIGIT",
+  recoveryTiming: "INSTANT",
+  runMode: "PER_SIGNAL",
 };
 
 export interface SessionState {
@@ -264,6 +255,8 @@ export interface SessionState {
   cooldownUntil: number; // timestamp in ms
   autoState: AutoExecutionState;
   pauseReason?: string;
+  recoveryTotalLost: number;
+  pendingRecovery: { direction: string; stake: number; digit: number } | null;
 }
 
 export interface OpenContract {
