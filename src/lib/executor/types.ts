@@ -140,15 +140,6 @@ export interface RiskSettings {
   duration?: number;
   durationUnit?: "t" | "s" | "m";
 
-  // Forge execution controls
-  entryExecutionMode: EntryExecutionMode;
-  signalExecutionMode: SignalExecutionMode;
-  recoveryExecutionMode: RecoveryExecutionMode;
-  overRecoveryDigit: number;
-  underRecoveryDigit: number;
-  defaultOverEntryDigit: number;
-  defaultUnderEntryDigit: number;
-
   // Split martingale / Recovery
   martingaleEnabled: boolean;
   baseStake: number;
@@ -234,8 +225,6 @@ export const DEFAULT_RISK_SETTINGS: RiskSettings = {
   minScore: 0, // Executor does not filter by Sentinel score by default
   minConfidence: 0, // Executor does not filter by Sentinel confidence by default
   riskPreset: "BALANCED",
-  minScore: 0,
-  minConfidence: 0,
   recoveryDigitOver: 3,
   recoveryDigitUnder: 6,
   defaultEntryDigitOver: 4,
