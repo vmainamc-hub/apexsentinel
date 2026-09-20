@@ -53,3 +53,12 @@
 .queue b{font-size:10px}
 .queue{max-height:240px;overflow:auto}
 @media(max-width:900px){.forge-grid{grid-template-columns:1fr}.forge-card.wide{grid-column:auto}.forge-head{align-items:flex-start;flex-direction:column}.metrics{grid-template-columns:repeat(2,1fr)}}
+.sentinel-forge .forge-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sentinel-forge label{display:flex;flex-direction:column;gap:6px;margin:0 0 12px;color:var(--sf-muted);font-size:11px;font-weight:700;letter-spacing:.05em}
+.sentinel-forge input,.sentinel-forge select{width:100%;box-sizing:border-box;border:1px solid var(--sf-border);background:#fff;color:var(--sf-text);border-radius:9px;padding:10px 11px;font:inherit;font-size:13px;outline:none}
+.sentinel-forge input:focus,.sentinel-forge select:focus{border-color:var(--sf-accent);box-shadow:0 0 0 3px rgba(59,109,240,.1)}
+.sentinel-forge .market-health{display:block;margin-top:5px;color:var(--sf-success);font-size:11px;font-weight:800}
+.sentinel-forge .risk-formula{padding:10px;border:1px dashed var(--sf-border);border-radius:9px;background:#f8fafc;color:var(--sf-muted);font-size:11px;line-height:1.45;margin-bottom:10px}
+.sentinel-forge .contract-list{display:grid;gap:8px}.sentinel-forge .contract-list>div{display:grid;grid-template-columns:1.1fr 1.4fr 1.1fr .7fr;gap:10px;align-items:center;padding:11px 12px;border:1px solid var(--sf-border);border-radius:9px;background:#fff}.sentinel-forge .profit,.sentinel-forge .win{color:var(--sf-success)}.sentinel-forge .loss{color:var(--sf-danger)}
+.sentinel-forge .table-wrap{overflow:auto;border:1px solid var(--sf-border);border-radius:10px;background:#fff}.sentinel-forge table{width:100%;border-collapse:collapse;min-width:920px;font-size:12px}.sentinel-forge th{position:sticky;top:0;background:#f7f9fb;color:var(--sf-muted);text-align:left;font-size:10px;letter-spacing:.06em;padding:10px;border-bottom:1px solid var(--sf-border)}.sentinel-forge td{padding:10px;border-bottom:1px solid #eef1f4;white-space:nowrap}.sentinel-forge tbody tr:last-child td{border-bottom:0}.sentinel-forge .empty-cell{text-align:center;color:var(--sf-muted);padding:28px}.sentinel-forge .forge-error{margin-top:10px;padding:10px;border-radius:9px;background:#fff2f3;color:var(--sf-danger);border:1px solid rgba(230,70,90,.2);font-size:12px}
+@media (max-width:900px){.sentinel-forge .forge-two{grid-template-columns:1fr}.sentinel-forge .contract-list>div{grid-template-columns:1fr 1fr}.sentinel-forge{padding:14px}.sentinel-forge .forge-head{gap:12px;flex-direction:column;align-items:flex-start}}
