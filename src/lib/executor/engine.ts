@@ -7,7 +7,7 @@ import type { ExecutionMode,ExecutionTrigger,ExecutorStatus,ExecutionSignal,Risk
 import { DEFAULT_RISK_SETTINGS } from "./types";
 
 export interface AccountSession { loginid:string; currency:string; balance:number; isVirtual:boolean; connected:boolean; }
-const SETTINGS_KEY="sentinel.forge.settings.v1"; const MAX_QUEUE=50; const EXECUTION_TIMEOUT_MS=12000;
+const SETTINGS_KEY="sentinel.forge.settings.v1"; const MAX_QUEUE=50;
 
 class SentinelForgeExecutor {
  private mode:ExecutionMode="PAPER"; private autoState:AutoExecutionState="OFF"; private risk:RiskSettings={...DEFAULT_RISK_SETTINGS};
