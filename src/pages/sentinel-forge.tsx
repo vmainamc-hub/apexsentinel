@@ -33,7 +33,7 @@ export default function SentinelForge(){
     <div className="toggle-row"><span>ENABLE MARTINGALE</span><button className={risk.martingaleEnabled?"toggle on":"toggle"} onClick={()=>updateRisk({martingaleEnabled:!risk.martingaleEnabled})}>{risk.martingaleEnabled?"ON":"OFF"}</button></div>
     <label>LOSS RECOVERY SPLIT<input type="number" min="1" max="10" step="1" value={risk.martingaleSplit} onChange={setNum("martingaleSplit",1,10)}/></label>
     <label>PAYOUT % USED<input type="number" min="1" max="1000" value={risk.payoutPercent} onChange={setNum("payoutPercent",1,1000)}/></label>
-    <label>MARTINGALE MULTIPLIER<input type="number" min=".01" max="10" step=".01" value={risk.martingaleMultiplier} onChange={setNum("martingaleMultiplier",.01,10)}/></label>
+    
     <label>MAX RECOVERY STAKE<input type="number" min=".35" step=".01" value={risk.maxRecoveryStake} onChange={setNum("maxRecoveryStake",.35)}/></label>
     <div className="risk-formula">The uploaded bot uses accumulated loss ÷ payout rate ÷ split. Forge keeps that split structure and applies the configured stake limits.</div>
     <div className="risk-line"><span>CURRENT STEP</span><b>{session.currentRecoveryStep}</b></div><div className="risk-line"><span>NEXT STAKE</span><b>{money(session.currentCalculatedStake)}</b></div>
