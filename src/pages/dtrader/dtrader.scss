@@ -160,17 +160,19 @@
   .dt-brand span,.dt-header-status span{display:none}
   .dt-market-picker-wrap{order:3;flex-basis:100%;max-width:none}
   .dt-market-menu{position:fixed;top:70px;left:8px;right:8px}
-  .dtrader__grid{padding:8px;display:block;overflow-y:auto}
+  .dtrader__grid{padding:8px;display:flex;flex-direction:column;overflow-y:auto}
+  .dtrader__grid main{display:contents}
+  .dt-chart-card{order:1}
+  .dtrader__digitpanel{order:2}
+  .dtrader__deck{order:3;margin-top:16px}
+  .dtrader__sentinel{order:4}
+  .dtrader__open-list{order:5}
   .dt-chart{height:340px;min-height:260px}
   .dtrader__digits{grid-template-columns:repeat(5,1fr)}
   .dtrader__metrics{grid-template-columns:repeat(2,1fr)}
   .dtrader__signal{grid-template-columns:1fr;text-align:left}
   .dtrader__signal-confidence{text-align:left}
   .dtrader__open{grid-template-columns:1fr 1fr}
-  .dtrader__deck{margin-top:16px}
-  .dtrader__quick-run{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--dt-border)}
-  .dtrader__quick-run>div{min-width:0}
-  .dtrader__quick-run small{display:block;font-size:9px;letter-spacing:.06em;color:var(--dt-muted);font-weight:700}
-  .dtrader__quick-run strong{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .dtrader__quick-run .dtrader__buy{width:auto;flex:0 0 auto;margin-top:0;padding:0 18px;height:42px;white-space:nowrap}
+  .dtrader__deck-market{display:block;margin-bottom:14px}
+  .dtrader__deck-market .dt-market-picker{width:100%}
 }
