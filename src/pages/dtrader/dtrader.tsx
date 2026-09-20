@@ -421,7 +421,7 @@ export default observer(function DTrader() {
                     <section className='dtrader__panel'>
                         <div className='dtrader__panel-head'><strong>0–9 LIVE DIGIT INTELLIGENCE</strong><div className='dtrader__window'>{[20,50,100,120,500,1000].map(n => <button key={n} className={windowSize === n ? 'active' : ''} onClick={() => setWindowSize(n)}>{n}</button>)}</div></div>
                         <div className='dtrader__note'>Distribution over the last {analysis.length} of {windowSize} selected ticks · live buffer holds {live1000.length} / 1000</div>
-                        <div className='dtrader__digits' style={last != null ? ({ '--last-index': last } as React.CSSProperties) : undefined}>
+                        <div className='dtrader__digits'>
                             {counts.map((c, d) => {
                                 const pct = (c / total) * 100;
                                 return (
@@ -433,7 +433,6 @@ export default observer(function DTrader() {
                                     </div>
                                 );
                             })}
-                            {last != null && <i className='dtrader__digit-marker' />}
                         </div>
                         <div className='dtrader__legend'>
                             <span className='is-most'>Most frequent</span>
@@ -443,6 +442,10 @@ export default observer(function DTrader() {
                             <span className='is-trend'>Rising fastest (60t)</span>
                         </div>
                         <div className='dtrader__metrics'><Metric l='EVEN' v={evenPct.toFixed(1) + '%'} /><Metric l='ODD' v={oddPct.toFixed(1) + '%'} /><Metric l='LAST' v={last == null ? '—' : String(last)} /><Metric l='SAMPLE' v={analysis.length + ' / ' + windowSize} /><Metric l='FEED' v={feedState} /></div>
+                        <div className='dtrader__quick-run'>
+                            <div><small>NEXT TRADE</small><strong>{labelFor(type, barrier)} · {duration}t · {stake}</strong></div>
+                            <button className='dtrader__buy' onClick={client?.is_logged_in ? buy : connectAccount} disabled={client?.is_logged_in ? (loading || !isBarrierValid()) : false}>{client?.is_logged_in ? ('RUN ' + labelFor(type, barrier).toUpperCase()) : 'CONNECT DERIV ACCOUNT'}</button>
+                        </div>
                     </section>
 
                     <section className='dtrader__panel dtrader__sentinel'>
