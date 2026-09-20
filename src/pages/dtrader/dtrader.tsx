@@ -357,15 +357,27 @@ export default observer(function DTrader() {
     }
 
     async function buy() {
-        if (!proposal?.id || !client?.is_logged_in) { setMessage('Log in to your Deriv account before buying.'); return; }
+        if (!client?.is_logged_in) { setMessage('Log in to your Deriv account before buying.'); return; }
         try {
-            const res = await chart_api.api.send({ buy: proposal.id, price: Number(proposal.ask_price) });
+            // The displayed proposal is for quoting only. It may be stale by the time RUN is
+            // pressed, especially after entry-digit arming. Request a fresh proposal immediately
+            // before purchase so the buy uses a currently valid ask price.
+            const payload: Record<string, any> = {
+                proposal: 1, amount: stake, basis: 'stake', contract_type: type,
+                currency: client.currency || 'USD', duration, duration_unit: 't',
+                underlying_symbol: symbol,
+            };
+            if (['DIGITOVER','DIGITUNDER','DIGITMATCH','DIGITDIFF','HIGHER','LOWER','TOUCH','NOTOUCH'].includes(type)) payload.barrier = barrier;
+            const fresh = await chart_api.api.send(payload);
+            const p = fresh?.proposal;
+            if (!p?.id) throw new Error(fresh?.error?.message || 'Could not get a live price for this contract right now.');
+            const res = await chart_api.api.send({ buy: p.id, price: Number(p.ask_price) });
             const id = Number(res?.buy?.contract_id);
             if (!id) throw new Error(res?.error?.message || 'Deriv did not return a contract ID.');
-            setOpenContracts(prev => [{ id, label: labelFor(type, barrier), status: 'open', profit: 0, bid: Number(proposal.ask_price) }, ...prev].slice(0, 20));
+            setOpenContracts(prev => [{ id, label: labelFor(type, barrier), status: 'open', profit: 0, bid: Number(p.ask_price) }, ...prev].slice(0, 20));
             setMessage('Contract purchased: ' + id);
         } catch (e: any) {
-            setMessage(e?.message || 'Purchase failed.');
+            setMessage((typeof e?.message === 'string' && e.message) ? e.message : 'Purchase failed — please try again.');
         }
     }
 
@@ -480,7 +492,7 @@ export default observer(function DTrader() {
                     <label>DERIV DURATION TICKS</label><div className='dtrader__durations'>{[1,2,3,4,5].map(n => <button key={n} className={duration === n ? 'active' : ''} onClick={() => setDuration(n)}>{n}t</button>)}</div>
                     <label>STAKE</label><input type='number' value={stake} min={0.35} step={0.01} onChange={e => setStake(Math.max(0.35, Number(e.target.value)))} />
                     <div className='dtrader__quote'><Metric l='MARKET' v={symbol} /><Metric l='CONTRACT' v={labelFor(type, barrier)} /><Metric l='ASK' v={loading ? '…' : proposal?.ask_price != null ? Number(proposal.ask_price).toFixed(2) : '—'} /><Metric l='PAYOUT' v={proposal?.payout != null ? Number(proposal.payout).toFixed(2) : '—'} /></div>
-                    <button className='dtrader__buy' onClick={client?.is_logged_in ? buy : connectAccount} disabled={client?.is_logged_in ? (!proposal?.id || loading || !isBarrierValid()) : false}>{client?.is_logged_in ? ('RUN ' + labelFor(type, barrier).toUpperCase()) : 'CONNECT DERIV ACCOUNT'}</button>
+                    <button className='dtrader__buy' onClick={client?.is_logged_in ? buy : connectAccount} disabled={client?.is_logged_in ? (loading || !isBarrierValid()) : false}>{client?.is_logged_in ? ('RUN ' + labelFor(type, barrier).toUpperCase()) : 'CONNECT DERIV ACCOUNT'}</button>
                     {message && <div className='dtrader__message'>{message}</div>}
                     <small>Manual execution only. This cockpit never buys automatically.</small>
                 </aside>
