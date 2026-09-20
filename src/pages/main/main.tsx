@@ -109,8 +109,9 @@ const AppWrapper = observer(() => {
     let tab_value: number | string = active_tab;
     const GetHashedValue = (tab: number) => {
         tab_value = location.hash?.split('#')[1];
-        if (!tab_value) return is_preview_mode ? BOT_BUILDER : tab;
-        return Number(hash.indexOf(String(tab_value)));
+        if (!tab_value) return is_preview_mode ? BOT_BUILDER : Math.max(0, Math.min(tab, hash.length - 1));
+        const index = hash.indexOf(String(tab_value));
+        return index >= 0 ? index : is_preview_mode ? BOT_BUILDER : Math.max(0, Math.min(tab, hash.length - 1));
     };
     const active_hash_tab = GetHashedValue(active_tab);
 
