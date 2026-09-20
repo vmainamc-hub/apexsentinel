@@ -18,6 +18,9 @@ export type ExecutorStatus =
   | "SIGNAL_INVALID";
 
 export type AutoExecutionState = "OFF" | "ON" | "PAUSED";
+export type EntryExecutionMode = "INSTANT" | "WAIT_FOR_ENTRY";
+export type SignalExecutionMode = "CONTINUOUS" | "ONE_PER_SIGNAL";
+export type RecoveryExecutionMode = "INSTANT" | "NEXT_SIGNAL";
 
 export type AutoSignalPolicy =
   | "EXECUTE_ALL"
@@ -137,10 +140,21 @@ export interface RiskSettings {
   duration?: number;
   durationUnit?: "t" | "s" | "m";
 
-  // Martingale / Recovery
+  // Forge execution controls
+  entryExecutionMode: EntryExecutionMode;
+  signalExecutionMode: SignalExecutionMode;
+  recoveryExecutionMode: RecoveryExecutionMode;
+  overRecoveryDigit: number;
+  underRecoveryDigit: number;
+  defaultOverEntryDigit: number;
+  defaultUnderEntryDigit: number;
+
+  // Split martingale / Recovery
   martingaleEnabled: boolean;
   baseStake: number;
   martingaleMultiplier: number;
+  martingaleSplit: number;
+  payoutPercent: number;
   maxRecoverySteps: number;
   maxRecoveryStake: number;
   resetAfterWin: boolean;
@@ -174,6 +188,8 @@ export interface RiskSettings {
   /** Forge multi-run execution controls; these do not alter Sentinel analysis. */
   runsPerSignal?: number;
   recoveryDigit?: number | null;
+  isRecovery?: boolean;
+  executionCycle?: number;
 }
 
 export const DEFAULT_RISK_SETTINGS: RiskSettings = {
@@ -188,6 +204,8 @@ export const DEFAULT_RISK_SETTINGS: RiskSettings = {
   martingaleEnabled: false,
   baseStake: 0.35,
   martingaleMultiplier: 1.2,
+  martingaleSplit: 2,
+  payoutPercent: 50,
   maxRecoverySteps: 6,
   maxRecoveryStake: 5.0,
   resetAfterWin: true,
@@ -215,6 +233,14 @@ export const DEFAULT_RISK_SETTINGS: RiskSettings = {
   minScore: 0, // Executor does not filter by Sentinel score by default
   minConfidence: 0, // Executor does not filter by Sentinel confidence by default
   riskPreset: "BALANCED",
+  entryExecutionMode: "INSTANT",
+  signalExecutionMode: "ONE_PER_SIGNAL",
+  recoveryExecutionMode: "NEXT_SIGNAL",
+  overRecoveryDigit: 3,
+  underRecoveryDigit: 6,
+  defaultOverEntryDigit: 4,
+  defaultUnderEntryDigit: 5,
+  /** @deprecated Forge no longer uses a fixed run count. */
   runsPerSignal: 1,
   recoveryDigit: null,
 };
@@ -270,6 +296,8 @@ export interface OpenContract {
   runIndex?: number;
   runsTotal?: number;
   entryDigit?: number;
+  isRecovery?: boolean;
+  executionCycle?: number;
   recoveryDigit?: number | null;
 }
 
@@ -334,6 +362,7 @@ export interface ExecutionAuditRecord {
   pressureSummary?: string;
   dangerScore?: number;
   liquidityStatus?: string;
+  entryDigit?: number;
   durationMs?: number;
   executorVersion: string;
 }
@@ -358,7 +387,7 @@ export type AuditEventType =
   | "COOLDOWN_STARTED"
   | "TARGET_PROFIT_REACHED"
   | "STOP_LOSS_REACHED"
-  | "EMERGENCY_STOP"
+  | "STOP"
   | "AUTO_PAUSED"
   | "AUTO_RESUMED"
   | "RECOVERY_STEP_ADVANCED"
