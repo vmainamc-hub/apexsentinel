@@ -146,7 +146,7 @@ export default observer(function DTrader() {
     const [openContract, setOpenContract] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState('');
-    const [windowSize, setWindowSize] = useState(100);
+    const [windowSize, setWindowSize] = useState(1000);
     const [feedState, setFeedState] = useState('CONNECTING');
     const [message, setMessage] = useState('');
 
@@ -284,16 +284,41 @@ export default observer(function DTrader() {
         return () => { cancelled = true; window.clearTimeout(timer); };
     }, [client?.is_logged_in, client?.currency, symbol, type, barrier, duration, stake]);
 
+    // Poll the contract status every second until it settles. Two safety nets were missing
+    // before: (1) a failed poll was silently swallowed forever, so a transient API hiccup left
+    // the Buy button stuck on "CONTRACT OPEN…" with zero feedback and no way to recover, and
+    // (2) there was no upper bound on how long we'd wait, so a contract that never reports a
+    // terminal status (e.g. the account's `proposal_open_contract` snapshot stalls) locked the
+    // whole trade deck indefinitely. Both are handled below: repeated failures surface a message
+    // and unlock a manual dismiss, and a hard timeout force-clears the lock either way.
+    const pollFailuresRef = useRef(0);
     useEffect(() => {
         if (!openContract?.id || !chart_api.api?.send) return;
+        pollFailuresRef.current = 0;
+        const startedAt = Date.now();
+        const STALL_TIMEOUT_MS = 3 * 60 * 1000; // never let a single contract lock the deck for more than 3 minutes
         const timer = window.setInterval(async () => {
             try {
                 const res = await chart_api.api.send({ proposal_open_contract: 1, contract_id: openContract.id });
                 const c = res?.proposal_open_contract;
+                if (res?.error) throw new Error(res.error.message || 'Contract status request failed');
+                pollFailuresRef.current = 0;
                 if (!c) return;
-                setOpenContract((p: any) => p ? { ...p, status: c.status, profit: Number(c.profit || 0), bid: Number(c.bid_price || 0), payout: Number(c.payout || 0) } : p);
-                if (c.is_sold || c.is_expired || ['won','lost','sold','expired'].includes(c.status)) window.clearInterval(timer);
-            } catch {}
+                setOpenContract((p: any) => p ? { ...p, status: c.status, profit: Number(c.profit || 0), bid: Number(c.bid_price || 0), payout: Number(c.payout || 0), stale: false } : p);
+                if (c.is_sold || c.is_expired || ['won', 'lost', 'sold', 'expired'].includes(c.status)) window.clearInterval(timer);
+            } catch (e: any) {
+                pollFailuresRef.current += 1;
+                if (pollFailuresRef.current >= 5) {
+                    setMessage('Losing connection to this contract’s status — check Reports in your Deriv account. You can dismiss this and keep trading.');
+                    setOpenContract((p: any) => (p ? { ...p, stale: true } : p));
+                }
+            } finally {
+                if (Date.now() - startedAt > STALL_TIMEOUT_MS) {
+                    window.clearInterval(timer);
+                    setMessage('This contract has been open for a while and stopped reporting updates — check Reports in your Deriv account. Dismissed so you can keep trading.');
+                    setOpenContract((p: any) => (p ? { ...p, stale: true } : p));
+                }
+            }
         }, 1000);
         return () => window.clearInterval(timer);
     }, [openContract?.id]);
@@ -353,7 +378,10 @@ export default observer(function DTrader() {
 
     const filteredMarkets = markets.filter(m => (m.symbol + ' ' + m.name).toLowerCase().includes(search.toLowerCase()));
     const contractResolved = !!openContract && TERMINAL_STATUSES.includes(openContract.status);
-    const contractPending = !!openContract && !contractResolved;
+    // A stale contract (poll failed repeatedly or hit the safety timeout) unlocks the deck the
+    // same as a resolved one would — the person can still dismiss and keep trading even if we
+    // never heard a final status back from Deriv.
+    const contractPending = !!openContract && !contractResolved && !openContract.stale;
 
     const chartSettings = useMemo(() => ({ assetInformation: false, countdown: true, isHighestLowestMarkerEnabled: false, language: common.current_language.toLowerCase(), position: ui.is_chart_layout_default ? 'bottom' : 'left', theme: ui.is_dark_mode_on ? 'dark' : 'light' }), [common.current_language, ui.is_chart_layout_default, ui.is_dark_mode_on]);
     const smartChartData = useMemo(() => ({ activeSymbols: chartData.activeSymbols, tradingTimes: chartData.tradingTimes }), [chartData.activeSymbols, chartData.tradingTimes]);
@@ -423,13 +451,13 @@ export default observer(function DTrader() {
                     </section>
 
                     {openContract && (
-                        <section className={'dtrader__panel dtrader__open' + (contractResolved ? ' is-resolved is-' + openContract.status : '')}>
-                            <div><small>{contractResolved ? 'CONTRACT ' + openContract.status.toUpperCase() : 'OPEN CONTRACT'}</small><strong>{openContract.label} · {openContract.id}</strong></div>
+                        <section className={'dtrader__panel dtrader__open' + (contractResolved ? ' is-resolved is-' + openContract.status : '') + (openContract.stale ? ' is-stale' : '')}>
+                            <div><small>{contractResolved ? 'CONTRACT ' + openContract.status.toUpperCase() : openContract.stale ? 'STATUS UNKNOWN' : 'OPEN CONTRACT'}</small><strong>{openContract.label} · {openContract.id}</strong></div>
                             <Metric l='STATUS' v={openContract.status} />
                             <Metric l='P/L' v={Number(openContract.profit || 0).toFixed(2)} />
                             <Metric l='BID' v={Number(openContract.bid || 0).toFixed(2)} />
                             <button onClick={sell} disabled={contractResolved} title='Close this contract now at the current market price instead of waiting for expiry'>{contractResolved ? 'CLOSED' : 'SELL NOW'}</button>
-                            {contractResolved && <button className='dtrader__dismiss' onClick={() => setOpenContract(null)} aria-label='Dismiss'>×</button>}
+                            {(contractResolved || openContract.stale) && <button className='dtrader__dismiss' onClick={() => setOpenContract(null)} aria-label='Dismiss'>×</button>}
                         </section>
                     )}
                 </main>

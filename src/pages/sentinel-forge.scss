@@ -1,1 +1,55 @@
-.sentinel-forge{padding:24px;max-width:1400px;margin:auto;color:var(--text-general,#fff)}.forge-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-end;margin-bottom:22px}.forge-kicker{letter-spacing:.18em;font-size:11px;opacity:.65}.forge-head h1{margin:5px 0;font-size:30px}.forge-head p{margin:0;opacity:.65}.forge-health{display:grid;grid-template-columns:auto auto;gap:3px 8px;align-items:center}.forge-health b{grid-column:2;font-size:12px}.dot{width:8px;height:8px;border-radius:50%;background:#888;display:inline-block}.dot.live{background:#20d487}.forge-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:14px}.forge-card{background:rgba(20,24,32,.72);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:20px;min-height:210px}.forge-card.wide{grid-column:1/-1}.card-title{font-size:11px;letter-spacing:.13em;opacity:.6;margin-bottom:18px}.signal-main{font-size:28px;font-weight:700}.signal-main span{display:block;font-size:12px;opacity:.55;margin-top:5px}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:22px 0}.metrics div{padding:12px;background:rgba(255,255,255,.04);border-radius:10px}.metrics small{display:block;font-size:9px;opacity:.5}.metrics b{display:block;margin-top:5px;font-size:14px}.forge-card label{display:grid;gap:6px;font-size:10px;opacity:.7;margin-bottom:13px}.forge-card input,.forge-card select{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:inherit;border-radius:8px;padding:9px}.forge-primary,.danger,.secondary{border:0;border-radius:9px;padding:11px 14px;cursor:pointer}.forge-primary{width:100%;background:#fff;color:#111}.danger{width:100%;background:#b42332;color:#fff;margin-top:8px}.secondary{background:rgba(255,255,255,.08);color:inherit;width:100%;margin-top:16px}.toggle-row{display:flex;justify-content:space-between;align-items:center;font-size:11px;margin:15px 0}.toggle{border:1px solid rgba(255,255,255,.15);background:transparent;color:inherit;border-radius:20px;padding:6px 12px}.toggle.on{background:#20d487;color:#07140e}.account-big{font-size:30px;font-weight:700;margin-bottom:20px}.account-big span{font-size:12px;opacity:.6}.risk-line{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px}.empty{padding:35px 0;opacity:.65;line-height:1.7}.empty span{font-size:11px}.execution-state{display:flex;gap:25px;align-items:center;margin-bottom:12px}.execution-state b{color:#20d487}.execution-state span{font-size:12px;opacity:.65}.queue>div{display:grid;grid-template-columns:1.5fr 1fr .8fr;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px}.queue b{font-size:10px}.queue{max-height:240px;overflow:auto}@media(max-width:900px){.forge-grid{grid-template-columns:1fr}.forge-card.wide{grid-column:auto}.forge-head{align-items:flex-start;flex-direction:column}.metrics{grid-template-columns:repeat(2,1fr)}}
+/* Sentinel Forge is a tab inside the same bounded workspace as DTrader/Bot
+   Builder (see main.scss: .dc-tabs__content is height:100%;overflow:hidden on
+   desktop, so each tab must own its own scrolling). This file previously had
+   no height/overflow rules at all, so any content past the first screenful
+   was silently clipped by the parent with no scrollbar — the page looked
+   static because there was no way to reach the rest of it. It also used a
+   hardcoded dark palette (near-black cards, white text) inside an app that is
+   otherwise light-themed, which is why it read as a flat grey slab instead
+   of matching the rest of the app. Both are fixed below using the same
+   light-theme tokens and scroll pattern as dtrader.scss. */
+:root{--sf-bg:#f4f6f9;--sf-surface:#fff;--sf-border:#e4e8ee;--sf-text:#161a1f;--sf-muted:#7c8794;--sf-accent:#3b6df0;--sf-danger:#e6465a;--sf-success:#17a768;--sf-shadow:0 1px 2px rgba(20,25,35,.04),0 8px 24px -12px rgba(20,25,35,.10)}
+.sentinel-forge{height:100%;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;box-sizing:border-box;padding:24px;max-width:1400px;margin:auto;background:var(--sf-bg);color:var(--sf-text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px}
+.sentinel-forge *{box-sizing:border-box}
+.forge-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-end;margin-bottom:22px}
+.forge-kicker{letter-spacing:.18em;font-size:11px;color:var(--sf-muted);font-weight:700}
+.forge-head h1{margin:5px 0;font-size:26px;font-weight:800;letter-spacing:-.02em}
+.forge-head p{margin:0;color:var(--sf-muted)}
+.forge-health{display:grid;grid-template-columns:auto auto;gap:3px 8px;align-items:center;font-size:11px;color:var(--sf-muted)}
+.forge-health b{grid-column:2;font-size:12px;color:var(--sf-text)}
+.dot{width:8px;height:8px;border-radius:50%;background:#c3cad2;display:inline-block}
+.dot.live{background:var(--sf-success);box-shadow:0 0 0 3px rgba(23,167,104,.16)}
+.forge-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:14px}
+.forge-card{background:var(--sf-surface);border:1px solid var(--sf-border);box-shadow:var(--sf-shadow);border-radius:14px;padding:20px;min-height:210px}
+.forge-card.wide{grid-column:1/-1}
+.card-title{font-size:11px;letter-spacing:.1em;font-weight:700;color:var(--sf-muted);margin-bottom:18px}
+.signal-main{font-size:26px;font-weight:800;color:var(--sf-text)}
+.signal-main span{display:block;font-size:12px;color:var(--sf-muted);margin-top:5px;font-weight:400}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:22px 0}
+.metrics div{padding:12px;background:var(--sf-bg);border:1px solid var(--sf-border);border-radius:10px}
+.metrics small{display:block;font-size:9px;color:var(--sf-muted)}
+.metrics b{display:block;margin-top:5px;font-size:14px;color:var(--sf-text)}
+.forge-card label{display:grid;gap:6px;font-size:10px;color:var(--sf-muted);font-weight:700;margin-bottom:13px}
+.forge-card input,.forge-card select{background:var(--sf-surface);border:1px solid var(--sf-border);color:var(--sf-text);border-radius:8px;padding:9px}
+.forge-card input:focus,.forge-card select:focus{outline:0;border-color:var(--sf-accent);box-shadow:0 0 0 3px rgba(59,109,240,.14)}
+.forge-primary,.danger,.secondary{border:0;border-radius:9px;padding:11px 14px;cursor:pointer;font-weight:700}
+.forge-primary{width:100%;background:var(--sf-accent);color:#fff}
+.forge-primary:disabled{opacity:.5;cursor:default}
+.danger{width:100%;background:var(--sf-danger);color:#fff;margin-top:8px}
+.secondary{background:var(--sf-bg);border:1px solid var(--sf-border);color:var(--sf-text);width:100%;margin-top:16px}
+.toggle-row{display:flex;justify-content:space-between;align-items:center;font-size:11px;margin:15px 0;color:var(--sf-muted);font-weight:700}
+.toggle{border:1px solid var(--sf-border);background:var(--sf-surface);color:var(--sf-text);border-radius:20px;padding:6px 12px;cursor:pointer}
+.toggle.on{background:var(--sf-success);border-color:var(--sf-success);color:#fff}
+.account-big{font-size:28px;font-weight:800;margin-bottom:20px;color:var(--sf-text)}
+.account-big span{font-size:12px;color:var(--sf-muted);font-weight:400}
+.risk-line{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--sf-border);font-size:12px;color:var(--sf-muted)}
+.risk-line b{color:var(--sf-text)}
+.empty{padding:35px 0;color:var(--sf-muted);line-height:1.7}
+.empty span{font-size:11px}
+.execution-state{display:flex;gap:25px;align-items:center;margin-bottom:12px}
+.execution-state b{color:var(--sf-success)}
+.execution-state span{font-size:12px;color:var(--sf-muted)}
+.queue>div{display:grid;grid-template-columns:1.5fr 1fr .8fr;padding:9px 0;border-bottom:1px solid var(--sf-border);font-size:12px}
+.queue b{font-size:10px}
+.queue{max-height:240px;overflow:auto}
+@media(max-width:900px){.forge-grid{grid-template-columns:1fr}.forge-card.wide{grid-column:auto}.forge-head{align-items:flex-start;flex-direction:column}.metrics{grid-template-columns:repeat(2,1fr)}}
