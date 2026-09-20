@@ -294,8 +294,6 @@ export interface OpenContract {
   runIndex?: number;
   runsTotal?: number;
   entryDigit?: number;
-  isRecovery?: boolean;
-  executionCycle?: number;
   recoveryDigit?: number | null;
   isRecovery?: boolean;
   executionCycle?: number;
