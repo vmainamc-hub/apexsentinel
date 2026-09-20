@@ -188,8 +188,6 @@ export interface RiskSettings {
   /** Forge multi-run execution controls; these do not alter Sentinel analysis. */
   runsPerSignal?: number;
   recoveryDigit?: number | null;
-  isRecovery?: boolean;
-  executionCycle?: number;
 }
 
 export const DEFAULT_RISK_SETTINGS: RiskSettings = {
@@ -299,6 +297,8 @@ export interface OpenContract {
   isRecovery?: boolean;
   executionCycle?: number;
   recoveryDigit?: number | null;
+  isRecovery?: boolean;
+  executionCycle?: number;
 }
 
 export interface DetailedTradeRecord {
