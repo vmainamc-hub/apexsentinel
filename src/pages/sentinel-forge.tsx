@@ -10,13 +10,13 @@ export default function SentinelForge(){
  const {apex,api,executor,risk,session,queue,openContracts,journal,executeManual,updateRisk}=useSentinelForge();
  const [stake,setStake]=useState(risk.baseStake);
  const signal=executor.getStagedSignal();
- const connected=api.isAuthorized&&api.connectionStatus===CONNECTION_STATUS.OPENED;
+ const connected=api.isAuthorized&&api.connectionStatus===CONNECTION_STATUS.OPENED; const executing=executor.isExecuting();
  const trades=journal.filter(r=>r.status==="EXECUTED").slice(0,80);
  const setNum=(key:any,min:number,max?:number)=>(e:any)=>{let v=Number(e.target.value);if(!Number.isFinite(v))v=min;v=Math.max(min,v);if(max!==undefined)v=Math.min(max,v);updateRisk({[key]:v} as any)};
  return <div className="sentinel-forge">
   <div className="forge-head"><div><div className="forge-kicker">SENTINEL FORGE</div><h1>Execution workspace</h1><p>Sentinel remains the authoritative signal engine. Forge only controls execution.</p></div><div className="forge-health"><span className={connected?"dot live":"dot"}></span>{connected?"ACCOUNT CONNECTED":"ACCOUNT OFFLINE"}<b>{api.activeLoginid||"—"}</b><span className="market-health">{apex.online}/{apex.total} MARKETS LIVE</span></div></div>
   <div className="forge-grid">
-   <section className="forge-card signal"><div className="card-title">CURRENT SENTINEL SIGNAL</div>{signal?<><div className="signal-main">{signal.contractLabel}<span>{signal.market}</span></div><div className="metrics"><div><small>ENTRY</small><b>{signal.entryDigit??"—"}</b></div><div><small>STATUS</small><b>{signal.sentinelStatus}</b></div><div><small>SCORE</small><b>{signal.score}</b></div><div><small>MODE</small><b>{risk.signalExecutionMode}</b></div></div><button className="forge-primary" disabled={!connected&&executor.getMode()==="LIVE"} onClick={()=>void executeManual(signal,stake)}>RUN SIGNAL</button></>:<div className="empty">Waiting for a surfaced Sentinel signal…<br/><span>{apex.status.toUpperCase()} · {apex.online}/{apex.total} markets live</span></div>}</section>
+   <section className="forge-card signal"><div className="card-title">CURRENT SENTINEL SIGNAL</div>{signal?<><div className="signal-main">{signal.contractLabel}<span>{signal.market}</span></div><div className="metrics"><div><small>ENTRY</small><b>{signal.entryDigit??"—"}</b></div><div><small>STATUS</small><b>{signal.sentinelStatus}</b></div><div><small>SCORE</small><b>{signal.score}</b></div><div><small>MODE</small><b>{risk.signalExecutionMode}</b></div></div><button className="forge-primary" disabled={executing||(!connected&&executor.getMode()==="LIVE")} onClick={()=>void executeManual(signal,stake)}>{executing?"EXECUTING…":"RUN SIGNAL"}</button></>:<div className="empty">Waiting for a surfaced Sentinel signal…<br/><span>{apex.status.toUpperCase()} · {apex.online}/{apex.total} markets live</span></div>}</section>
 
    <section className="forge-card"><div className="card-title">EXECUTION CONTROLS</div>
     <label>ACCOUNT MODE<select value={executor.getMode()} onChange={e=>executor.setMode(e.target.value as any)}><option value="PAPER">PAPER</option><option value="LIVE">LIVE</option></select></label>
