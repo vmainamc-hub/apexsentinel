@@ -7,13 +7,13 @@ import type { ExecutionMode,ExecutionTrigger,ExecutorStatus,ExecutionSignal,Risk
 import { DEFAULT_RISK_SETTINGS } from "./types";
 
 export interface AccountSession { loginid:string; currency:string; balance:number; isVirtual:boolean; connected:boolean; }
-const SETTINGS_KEY="sentinel.forge.settings.v1"; const MAX_QUEUE=50;
+const SETTINGS_KEY="sentinel.forge.settings.v1"; const MAX_QUEUE=50; const EXECUTION_TIMEOUT_MS=12000;
 
 class SentinelForgeExecutor {
  private mode:ExecutionMode="PAPER"; private autoState:AutoExecutionState="OFF"; private risk:RiskSettings={...DEFAULT_RISK_SETTINGS};
  private account:AccountSession|null=null; private queue:SignalQueueItem[]=[]; private staged:ExecutionSignal|null=null;
  private open=new Map<string,OpenContract>(); private listeners=new Set<()=>void>(); private lastTickAt=0; private latestError:string|null=null; private pipelineStep="IDLE";
- private baseline:number|null=null; private tradesThisHour:number[]=[]; private executedIds=new Set<string>();
+ private baseline:number|null=null; private tradesThisHour:number[]=[]; private executedIds=new Set<string>(); private executionInFlight=false;
  private session:SessionState={startingBalance:null,accountStartBalance:null,currentAccountBalance:null,accountPnl:0,sessionProfit:0,sessionLoss:0,netPnl:0,tradesCount:0,wins:0,losses:0,winRate:0,consecutiveLosses:0,currentRecoveryStep:0,currentCalculatedStake:.35,isTargetProfitReached:false,isStopLossReached:false,isMaxConsecutiveLossesReached:false,cooldownUntil:0,autoState:"OFF",recoveryTotalLost:0,pendingRecovery:null};
  constructor(){this.load(); derivBus.onTick((s,t)=>{this.lastTickAt=t.t;});}
  private load(){if(typeof window==="undefined")return;try{const x=localStorage.getItem(SETTINGS_KEY);if(x)this.risk={...DEFAULT_RISK_SETTINGS,...JSON.parse(x)}}catch{}}
@@ -40,6 +40,7 @@ class SentinelForgeExecutor {
    :calculateStake({baseStake:this.risk.baseStake,martingaleEnabled:true,martingaleMultiplier:this.risk.martingaleMultiplier,recoveryStep:this.session.currentRecoveryStep,maxStake:this.risk.maxStake,maxRecoveryStake:this.risk.maxRecoveryStake,accountBalance:balance});
   this.session.currentCalculatedStake=r.stake;return r.stake;
  }
+ isExecuting(){return this.executionInFlight||this.pipelineStep==="PROPOSAL"||this.pipelineStep==="BUYING"}
  getStatus():ExecutorStatus{if(this.mode==="LIVE"&&!this.account?.connected)return"ACCOUNT_DISCONNECTED";if(this.pipelineStep==="PROPOSAL"||this.pipelineStep==="BUYING")return"EXECUTING";if(this.autoState==="PAUSED")return"PAUSED";if(this.autoState==="ON")return"ARMED";if(this.lastTickAt&&Date.now()-this.lastTickAt>7000)return"FEED_STALE";return"AUTO_OFF"}
  receiveSignal(signal:ExecutionSignal){
   const v=validateSignalStructure(signal);if(!v.valid){this.latestError=v.reason||"Invalid signal";return null}
@@ -72,28 +73,32 @@ class SentinelForgeExecutor {
  private async processQueue(){for(const q of this.queue.filter(x=>x.state==="RECEIVED"||x.state==="LOADED"))await this.awaitEntry(q)}
  private gates(s:ExecutionSignal,trigger:ExecutionTrigger,stake:number):GateEvaluationResult{const age=Date.now()-s.createdAt;if(age>Math.max(30,this.risk.maxSignalAgeSeconds)*1000)return{ok:false,reason:"Signal expired"};if(trigger==="AUTO"&&this.autoState!=="ON")return{ok:false,reason:"Auto execution is OFF"};if(trigger==="AUTO"&&this.risk.autoSignalPolicy==="SELECTED_TYPES"&&!this.risk.allowedContractTypes.includes(s.contractType))return{ok:false,reason:"Contract type excluded by execution policy"};if(this.mode==="LIVE"&&(!this.account?.connected||!this.account.loginid))return{ok:false,reason:"Account disconnected"};if(this.mode==="LIVE"&&(this.account?.balance??0)<stake)return{ok:false,reason:"Insufficient account balance"};if(this.open.size>=this.risk.maxOpenContracts)return{ok:false,reason:"Maximum open contracts reached"};if(this.risk.targetProfit!==null&&this.session.accountPnl>=this.risk.targetProfit)return{ok:false,reason:"Target profit reached"};if(this.risk.maxDailyProfit!==null&&this.session.sessionProfit>=this.risk.maxDailyProfit)return{ok:false,reason:"Daily profit limit reached"};if(this.risk.stopLoss!==null&&this.session.accountPnl<=-this.risk.stopLoss)return{ok:false,reason:"Stop loss reached"};if(this.risk.maxConsecutiveLosses!==null&&this.session.consecutiveLosses>=this.risk.maxConsecutiveLosses)return{ok:false,reason:"Maximum consecutive losses reached"};if(this.risk.maxTradesPerSession!==null&&this.session.tradesCount>=this.risk.maxTradesPerSession)return{ok:false,reason:"Session trade limit reached"};if(stake<.35||stake>this.risk.maxStake)return{ok:false,reason:"Stake outside configured bounds"};return{ok:true}}
  async executeSignal(s:ExecutionSignal,trigger:ExecutionTrigger="MANUAL",customStake?:number){
+  if(this.executionInFlight)return{ok:false,error:"An execution is already in progress"};
   const stake=customStake??this.getEffectiveNextStake();
   if(this.executedIds.has(s.id)&&this.risk.duplicateProtection)return{ok:false,error:"Duplicate signal"};
   const gate=this.gates(s,trigger,stake);
   if(!gate.ok){executionJournal.recordRejection({signalId:s.id,account:this.account?.loginid??"N/A",market:s.market,contract:s.contractType,barrier:s.barrier,duration:s.duration,stake,confidence:s.confidence,confluence:s.confluence,reason:gate.reason||"Execution blocked",mode:this.mode+"_"+trigger as any});return{ok:false,error:gate.reason}}
-  this.executedIds.add(s.id);this.pipelineStep="PROPOSAL";this.notify();
+  this.executedIds.add(s.id);this.executionInFlight=true;this.latestError=null;this.pipelineStep="PROPOSAL";this.notify();
   const inRecovery=this.risk.martingaleEnabled&&this.session.recoveryTotalLost>0;
   const recoveryDigit=inRecovery?this.recoveryDigitFor(this.directionOf(s)):null;
-  if(this.mode==="PAPER"){await new Promise(r=>setTimeout(r,50));this.session.tradesCount++;this.pipelineStep="IDLE";this.notify();return{ok:true,contractId:"PAPER-"+Date.now()}}
+  if(this.mode==="PAPER"){try{await new Promise(r=>setTimeout(r,50));this.session.tradesCount++;this.pipelineStep="IDLE";this.notify();return{ok:true,contractId:"PAPER-"+Date.now()}}finally{this.executionInFlight=false;this.notify()}}
   try{
    if(!api_base.api)throw new Error("Deriv connection unavailable");
-   const proposal:any=await api_base.api.send({proposal:1,amount:stake,basis:"stake",contract_type:s.contractType,currency:this.account?.currency||"USD",duration:s.duration,duration_unit:s.durationUnit,barrier:s.barrier,underlying_symbol:s.market});
+   if((api_base.api as any).connection?.readyState!==undefined&&(api_base.api as any).connection.readyState!==1)throw new Error("Deriv connection is not open");
+   const withTimeout=<T,>(promise:Promise<T>,label:string)=>new Promise<T>((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error(`${label} timed out after ${EXECUTION_TIMEOUT_MS/1000}s`)),EXECUTION_TIMEOUT_MS);promise.then(resolve,reject).finally(()=>clearTimeout(timer));});
+   const proposal:any=await withTimeout(api_base.api.send({proposal:1,amount:stake,basis:"stake",contract_type:s.contractType,currency:this.account?.currency||"USD",duration:s.duration,duration_unit:s.durationUnit,barrier:s.barrier,underlying_symbol:s.market}),"Proposal request");
    const pid=proposal?.proposal?.id;if(!pid)throw new Error(proposal?.error?.message||"Proposal unavailable");
    this.pipelineStep="BUYING";
-   const buy:any=await api_base.api.send({buy:pid,price:stake});
+   this.pipelineStep="BUYING";this.notify();
+   const buy:any=await withTimeout(api_base.api.send({buy:pid,price:stake}),"Buy request");
    const cid=String(buy?.buy?.contract_id||"");if(!cid)throw new Error(buy?.error?.message||"Buy failed");
    const oc:OpenContract={contractId:cid,signalId:s.id,market:s.market,marketName:s.marketName,contractType:s.contractType,contractLabel:s.contractLabel,barrier:s.barrier,durationTicks:s.duration,buyPrice:Number(buy.buy.buy_price??stake),potentialPayout:Number(buy.buy.payout??0),currentProfit:0,status:"open",buyTime:Date.now(),isSellable:true,mode:this.mode,accountLoginid:this.account!.loginid,baseSignalId:s.metadata?.baseSignalId||s.id,runIndex:1,runsTotal:1,entryDigit:s.entryDigit,recoveryDigit};
    this.open.set(cid,oc);this.session.tradesCount++;
    executionJournal.recordTrade({signalId:s.id,account:this.account!.loginid,market:s.market,contract:s.contractType,barrier:s.barrier,duration:s.duration,stake,martingaleStep:this.session.currentRecoveryStep,baseStake:this.risk.baseStake,multiplier:this.risk.martingaleMode==="SPLIT"?this.risk.martingaleSplit:this.risk.martingaleMultiplier,targetProfit:this.risk.targetProfit,stopLoss:this.risk.stopLoss,buyPrice:oc.buyPrice,payout:oc.potentialPayout,contractId:cid,status:"EXECUTED",mode:`${this.mode}_${trigger}` as "LIVE_AUTO"|"LIVE_MANUAL"|"PAPER_AUTO"|"PAPER_MANUAL",trigger});
    this.listenContract(cid,oc);
    executionJournal.logEvent({type:"BUY_CONFIRMED",signalId:s.id,message:"Contract purchased.",details:{contractId:cid,stake,barrier:s.barrier}});
-   this.pipelineStep="IDLE";this.notify();return{ok:true,contractId:cid}
-  }catch(e){this.latestError=e instanceof Error?e.message:String(e);this.pipelineStep="IDLE";this.notify();return{ok:false,error:this.latestError}}
+   this.pipelineStep="IDLE";this.executionInFlight=false;this.notify();return{ok:true,contractId:cid}
+  }catch(e){this.latestError=e instanceof Error?e.message:String(e);this.pipelineStep="IDLE";this.executionInFlight=false;this.notify();return{ok:false,error:this.latestError}}
  }
  private listenContract(cid:string,oc:OpenContract){if(!api_base.api)return;const send:any=(api_base.api as any).send.bind(api_base.api);const sub:any=send({proposal_open_contract:1,contract_id:cid,subscribe:1});if(sub?.then)void sub.then((x:any)=>this.handleContract(x?.subscription?.data||x));const un=api_base.api.onMessage().subscribe((m:any)=>{const x=m?.data||m;if(x?.msg_type!=="proposal_open_contract"||String(x?.proposal_open_contract?.contract_id)!==cid)return;this.handleContract(x);if(x.proposal_open_contract?.is_sold||x.proposal_open_contract?.status==="sold")un.unsubscribe?.()})}
  private handleContract(m:any){
