@@ -30,12 +30,15 @@ class DerivTickBus{
   if(!api_base.api){this.setStatus("error");this.seeding.delete(s);this.scheduleRetry(s);return}
   this.setStatus("connecting");
   try{
+   // Attach the shared message listener BEFORE subscribing. Deriv can deliver the
+   // first live tick immediately after the subscribe request; attaching afterwards
+   // creates a silent race where the UI receives history but never advances.
+   this.attachMessageListener();
    const sub:any=api_base.api.send({ticks:s,subscribe:1});
    this.subs.set(s,sub);
    if(sub?.then){const resolved=await sub; this.subs.set(s,resolved?.subscription||resolved)}
    const r:any=await api_base.api.send({ticks_history:s,adjust_start_time:1,count:MAX_BUFFER,end:"latest",style:"ticks"});
    if(r?.history?.prices){const times=r.history.times||[];this.setBuffer(s,r.history.prices.map((p:number,i:number)=>({t:Number(times[i])*1000,price:Number(p)})));this.histLs.forEach(f=>f(s,this.getTicks(s)));}
-   this.attachMessageListener();
    this.clearRetry(s);
    this.setStatus("live");
   }catch{
