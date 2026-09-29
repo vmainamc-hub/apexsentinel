@@ -5,6 +5,7 @@ import { useDevice } from '@deriv-com/ui';
 import { useSmartChartAdaptor } from '@/hooks/useSmartChartAdaptor';
 import { generateOAuthURL } from '@/components/shared';
 import chart_api from '@/external/bot-skeleton/services/api/chart-api';
+import { derivBus } from '@/lib/deriv/tick-bus';
 import { useStore } from '@/hooks/useStore';
 import './dtrader.scss';
 
@@ -240,33 +241,56 @@ export default observer(function DTrader() {
         quotesRef.current = { getQuotes, subscribeQuotes, unsubscribeQuotes };
     }, [getQuotes, subscribeQuotes, unsubscribeQuotes]);
 
+    // Live DTrader feed is driven by the shared Deriv tick bus. Historical ticks are
+    // loaded through the SmartCharts adapter, but the cursor/distribution never depend
+    // on a chart subscription being healthy. This keeps one WebSocket while giving the
+    // trading surface its own explicit, continuously updating tick stream.
     useEffect(() => {
         if (!adapterInitialized) return;
         let cancelled = false;
-        let unsubscribe: (() => void) | undefined;
+        let releaseBus: (() => void) | undefined;
+        let releaseTick: (() => void) | undefined;
+        let releaseHistory: (() => void) | undefined;
+        let releaseStatus: (() => void) | undefined;
         setFeedState('LOADING');
-        (async () => {
-            try {
-                const response = await quotesRef.current.getQuotes({ symbol, granularity: 0, count: 1000 });
-                const prices = response?.history?.prices || [];
-                if (cancelled) return;
-                setTicks(prices.map((q: number) => ({ epoch: 0, quote: Number(q), digit: digitFromQuote(Number(q), decimalsRef.current) })).slice(-1000));
-                setFeedState('LIVE');
-                unsubscribe = quotesRef.current.subscribeQuotes({ symbol, granularity: 0 }, (quote: any) => {
-                    if (cancelled) return;
-                    const price = Number(quote?.Close ?? quote?.quote ?? quote?.price);
-                    if (!Number.isFinite(price)) return;
-                    setTicks(previous => [...previous, { epoch: Number(quote?.Date || Date.now() / 1000), quote: price, digit: digitFromQuote(price, decimalsRef.current) }].slice(-1000));
-                    setFeedState('LIVE');
-                });
-            } catch {
-                if (!cancelled) setFeedState('ERROR');
-            }
-        })();
+
+        const applyHistory = (symbolName: string, history: { t: number; price: number }[]) => {
+            if (cancelled || symbolName !== symbol || !history.length) return;
+            setTicks(history.slice(-1000).map(t => ({
+                epoch: t.t / 1000,
+                quote: Number(t.price),
+                digit: digitFromQuote(Number(t.price), decimalsRef.current),
+            })));
+        };
+
+        releaseHistory = derivBus.onHistory(applyHistory);
+        releaseStatus = derivBus.onStatus(status => {
+            if (cancelled) return;
+            if (status === 'error') setFeedState('ERROR');
+            else if (status === 'connecting') setFeedState('CONNECTING');
+            else if (status === 'live') setFeedState('LIVE');
+        });
+        releaseTick = derivBus.onTick((tickSymbol, tick) => {
+            if (cancelled || tickSymbol !== symbol) return;
+            setTicks(previous => [...previous, {
+                epoch: tick.t / 1000,
+                quote: Number(tick.price),
+                digit: digitFromQuote(Number(tick.price), decimalsRef.current),
+            }].slice(-1000));
+            setFeedState('LIVE');
+        });
+
+        // Reuse any already-buffered ticks immediately, then ensure this DTrader
+        // instance owns a reference to the shared live subscription.
+        applyHistory(symbol, derivBus.getTicks(symbol));
+        releaseBus = derivBus.subscribe([symbol]);
+
         return () => {
             cancelled = true;
-            try { unsubscribe?.(); } catch {}
-            try { quotesRef.current.unsubscribeQuotes({ symbol, granularity: 0 }); } catch {}
+            releaseBus?.();
+            releaseTick?.();
+            releaseHistory?.();
+            releaseStatus?.();
         };
     }, [symbol, adapterInitialized]);
 
