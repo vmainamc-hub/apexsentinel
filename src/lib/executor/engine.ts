@@ -86,11 +86,12 @@ class SentinelForgeExecutor {
    if(!api_base.api)throw new Error("Deriv connection unavailable");
    if((api_base.api as any).connection?.readyState!==undefined&&(api_base.api as any).connection.readyState!==1)throw new Error("Deriv connection is not open");
    const withTimeout=<T,>(promise:Promise<T>,label:string)=>new Promise<T>((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error(`${label} timed out after ${EXECUTION_TIMEOUT_MS/1000}s`)),EXECUTION_TIMEOUT_MS);promise.then(resolve,reject).finally(()=>clearTimeout(timer));});
-   const proposal:any=await withTimeout(api_base.api.send({proposal:1,amount:stake,basis:"stake",contract_type:s.contractType,currency:this.account?.currency||"USD",duration:s.duration,duration_unit:s.durationUnit,barrier:s.barrier,underlying_symbol:s.market}),"Proposal request");
+   const send:any=(api_base.api as any).send.bind(api_base.api);
+   const proposal:any=await withTimeout(Promise.resolve(send({proposal:1,amount:stake,basis:"stake",contract_type:s.contractType,currency:this.account?.currency||"USD",duration:s.duration,duration_unit:s.durationUnit,barrier:s.barrier,underlying_symbol:s.market})),"Proposal request");
    const pid=proposal?.proposal?.id;if(!pid)throw new Error(proposal?.error?.message||"Proposal unavailable");
    this.pipelineStep="BUYING";
    this.pipelineStep="BUYING";this.notify();
-   const buy:any=await withTimeout(api_base.api.send({buy:pid,price:stake}),"Buy request");
+   const buy:any=await withTimeout(Promise.resolve(send({buy:pid,price:stake})),"Buy request");
    const cid=String(buy?.buy?.contract_id||"");if(!cid)throw new Error(buy?.error?.message||"Buy failed");
    const oc:OpenContract={contractId:cid,signalId:s.id,market:s.market,marketName:s.marketName,contractType:s.contractType,contractLabel:s.contractLabel,barrier:s.barrier,durationTicks:s.duration,buyPrice:Number(buy.buy.buy_price??stake),potentialPayout:Number(buy.buy.payout??0),currentProfit:0,status:"open",buyTime:Date.now(),isSellable:true,mode:this.mode,accountLoginid:this.account!.loginid,baseSignalId:s.metadata?.baseSignalId||s.id,runIndex:1,runsTotal:1,entryDigit:s.entryDigit,recoveryDigit};
    this.open.set(cid,oc);this.session.tradesCount++;
