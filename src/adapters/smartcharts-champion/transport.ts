@@ -47,7 +47,10 @@ export function createTransport(): TTransport {
                 current.callback(data);
             });
 
-            const response = await api.send(stored.request);
+            const response = await Promise.race([
+                api.send(stored.request),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Deriv subscription request timed out')), 10000)),
+            ]);
             const current = subscriptions.get(tempId);
             if (!current) return;
             const subscriptionId = response?.subscription?.id;
@@ -60,6 +63,12 @@ export function createTransport(): TTransport {
             current?.messageSubscription?.unsubscribe();
             if (current) current.messageSubscription = undefined;
             console.error('[SmartCharts Transport] Subscription failed:', error);
+            // A request timeout while readyState is OPEN is a silent transport failure.
+            // Closing the shared socket delegates recovery to APIBase's existing
+            // exponential reconnect path rather than creating a second socket here.
+            try {
+                if (api.connection?.readyState === WebSocket.OPEN) api.connection.close();
+            } catch {}
         } finally {
             const current = subscriptions.get(tempId);
             if (current) current.binding = false;
