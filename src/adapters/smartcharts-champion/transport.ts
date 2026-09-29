@@ -11,6 +11,9 @@ export function createTransport(): TTransport {
         callback: (response: any) => void;
         messageSubscription?: { unsubscribe: () => void };
         realSubscriptionId: string | null;
+        lastMessageAt: number;
+        binding: boolean;
+        staleAfterMs: number;
     }>();
 
     const requireApi = () => {
@@ -18,39 +21,72 @@ export function createTransport(): TTransport {
         return chart_api.api;
     };
 
-    const bindSubscription = (tempId: string, api: any) => {
+    const bindSubscription = async (tempId: string, api: any) => {
         const stored = subscriptions.get(tempId);
-        if (!stored) return;
-        stored.messageSubscription?.unsubscribe();
-        stored.realSubscriptionId = null;
-        stored.messageSubscription = api.onMessage()?.subscribe(({ data }: { data: any }) => {
-            const s = subscriptions.get(tempId);
-            const subscriptionId = data?.subscription?.id;
-            if (!s || !subscriptionId || subscriptionId !== s.realSubscriptionId) return;
-            s.callback(data);
-        });
-        api.send(stored.request)
-            .then((response: any) => {
-                const s = subscriptions.get(tempId);
-                if (!s) return;
-                const subscriptionId = response?.subscription?.id;
-                if (!subscriptionId) throw new Error('Deriv did not return a subscription ID');
-                s.realSubscriptionId = subscriptionId;
-                s.callback(response);
-            })
-            .catch((error: any) => {
-                subscriptions.get(tempId)?.messageSubscription?.unsubscribe();
-                subscriptions.delete(tempId);
-                console.error('[SmartCharts Transport] Subscription failed:', error);
+        if (!stored || stored.binding) return;
+        stored.binding = true;
+        try {
+            const oldSubscriptionId = stored.realSubscriptionId;
+            stored.messageSubscription?.unsubscribe();
+            stored.messageSubscription = undefined;
+            stored.realSubscriptionId = null;
+
+            // A silent stream can occur while the socket itself still reports OPEN.
+            // Explicitly forget the old stream before replacing it so stale subscriptions
+            // cannot accumulate on the shared WebSocket.
+            if (oldSubscriptionId && api === chart_api.api) {
+                try { await api.forget(oldSubscriptionId); } catch {}
+            }
+
+            stored.lastMessageAt = Date.now();
+            stored.messageSubscription = api.onMessage()?.subscribe(({ data }: { data: any }) => {
+                const current = subscriptions.get(tempId);
+                const subscriptionId = data?.subscription?.id;
+                if (!current || !subscriptionId || subscriptionId !== current.realSubscriptionId) return;
+                current.lastMessageAt = Date.now();
+                current.callback(data);
             });
+
+            const response = await api.send(stored.request);
+            const current = subscriptions.get(tempId);
+            if (!current) return;
+            const subscriptionId = response?.subscription?.id;
+            if (!subscriptionId) throw new Error('Deriv did not return a subscription ID');
+            current.realSubscriptionId = subscriptionId;
+            current.lastMessageAt = Date.now();
+            current.callback(response);
+        } catch (error: any) {
+            const current = subscriptions.get(tempId);
+            current?.messageSubscription?.unsubscribe();
+            if (current) current.messageSubscription = undefined;
+            console.error('[SmartCharts Transport] Subscription failed:', error);
+        } finally {
+            const current = subscriptions.get(tempId);
+            if (current) current.binding = false;
+        }
     };
 
     let lastApi: any = null;
     const stopWatchingReconnects = chart_api.onReady((api: any) => {
         if (!api || api === lastApi) return;
         lastApi = api;
-        for (const tempId of subscriptions.keys()) bindSubscription(tempId, api);
+        for (const tempId of subscriptions.keys()) void bindSubscription(tempId, api);
     });
+
+    // Deriv recommends detecting silent WebSocket failures, not only CLOSED sockets.
+    // Tick streams should produce frequent updates on synthetic indices; if no message
+    // arrives for 15s, rebuild that subscription on the same shared socket.
+    const watchdog = window.setInterval(() => {
+        const api = chart_api.api;
+        if (!api?.send || api.connection?.readyState !== WebSocket.OPEN) return;
+        const now = Date.now();
+        for (const [tempId, subscription] of subscriptions) {
+            if (subscription.binding || !subscription.realSubscriptionId) continue;
+            if (now - subscription.lastMessageAt > subscription.staleAfterMs) {
+                void bindSubscription(tempId, api);
+            }
+        }
+    }, 5000);
 
     return {
         async send(request: any): Promise<any> {
@@ -60,8 +96,19 @@ export function createTransport(): TTransport {
         subscribe(request: any, callback: (response: any) => void): string {
             const tempId = `smartchart-${Date.now()}-${Math.random().toString(36).slice(2)}`;
             const subscribeRequest = { ...request, subscribe: 1 };
-            subscriptions.set(tempId, { request: subscribeRequest, callback, messageSubscription: undefined, realSubscriptionId: null });
-            bindSubscription(tempId, requireApi());
+            const staleAfterMs = request?.granularity === 0
+                ? 15000
+                : Math.max(90000, Number(request?.granularity || 60) * 2000 + 10000);
+            subscriptions.set(tempId, {
+                request: subscribeRequest,
+                callback,
+                messageSubscription: undefined,
+                realSubscriptionId: null,
+                lastMessageAt: Date.now(),
+                binding: false,
+                staleAfterMs,
+            });
+            void bindSubscription(tempId, requireApi());
             return tempId;
         },
 
@@ -85,6 +132,7 @@ export function createTransport(): TTransport {
                 subscriptions.delete(id);
             }
             stopWatchingReconnects();
+            window.clearInterval(watchdog);
         },
     };
 }
