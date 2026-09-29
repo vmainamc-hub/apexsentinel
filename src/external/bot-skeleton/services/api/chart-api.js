@@ -64,8 +64,19 @@ class ChartAPI {
         this.time_interval = setInterval(() => {
             if (this.api?.send) {
                 // Deriv recommends a periodic ping to keep the shared WebSocket
-                // alive and detect connectivity failures early.
-                this.api.send({ ping: 1 }).catch?.(() => {});
+                // alive and detect connectivity failures early. If the request itself
+                // hangs while the browser still reports OPEN, close the shared socket
+                // so APIBase's existing reconnect path can recover it.
+                const api = this.api;
+                const ping = api.send({ ping: 1 });
+                Promise.race([
+                    ping,
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Deriv heartbeat timed out')), 10000)),
+                ]).catch(() => {
+                    try {
+                        if (api.connection?.readyState === WebSocket.OPEN) api.connection.close();
+                    } catch {}
+                });
             }
         }, 30000);
     };
