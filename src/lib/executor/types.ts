@@ -145,6 +145,7 @@ export interface RiskSettings {
   baseStake: number;
   martingaleMultiplier: number;
   martingaleSplit: number;
+  martingaleMode: "SPLIT" | "EXPONENTIAL";
   payoutPercent: number;
   maxRecoverySteps: number;
   maxRecoveryStake: number;
@@ -179,6 +180,13 @@ export interface RiskSettings {
   /** Forge multi-run execution controls; these do not alter Sentinel analysis. */
   runsPerSignal?: number;
   recoveryDigit?: number | null;
+  recoveryDigitOver: number;
+  recoveryDigitUnder: number;
+  defaultEntryDigitOver: number;
+  defaultEntryDigitUnder: number;
+  entryMode: "INSTANT" | "WAIT_FOR_ENTRY_DIGIT";
+  recoveryTiming: "INSTANT" | "NEXT_SIGNAL";
+  runMode: "PER_SIGNAL" | "CONTINUOUS";
 }
 
 export const DEFAULT_RISK_SETTINGS: RiskSettings = {
@@ -352,6 +360,7 @@ export interface ExecutionAuditRecord {
   dangerScore?: number;
   liquidityStatus?: string;
   entryDigit?: number;
+  exitDigit?: number;
   durationMs?: number;
   executorVersion: string;
 }
@@ -381,7 +390,8 @@ export type AuditEventType =
   | "AUTO_RESUMED"
   | "RECOVERY_STEP_ADVANCED"
   | "RECOVERY_RESET"
-  | "EXECUTION_FAILED";
+  | "EXECUTION_FAILED"
+  | "EMERGENCY_STOP";
 
 export interface AuditEvent {
   id: string;
