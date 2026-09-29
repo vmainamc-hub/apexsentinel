@@ -28,6 +28,7 @@ export interface ActiveSymbolInput {
     symbol: string;
     underlying_symbol?: string;
     display_name?: string;
+    underlying_symbol_name?: string;
     market: string;
     market_display_name?: string;
     submarket: string;
@@ -321,8 +322,16 @@ export class ActiveSymbolsProcessorService {
      */
     private ensureBackwardCompatibility(symbol: Partial<ProcessedActiveSymbol>): void {
         // Handle new API field names
-        if (symbol.symbol_type && !symbol.underlying_symbol_type) {
+        if (symbol.underlying_symbol_type && !symbol.symbol_type) {
+            symbol.symbol_type = symbol.underlying_symbol_type;
+        } else if (symbol.symbol_type && !symbol.underlying_symbol_type) {
             symbol.underlying_symbol_type = symbol.symbol_type;
+        }
+
+        // Current Deriv active_symbols uses underlying_symbol_name; preserve it as
+        // the canonical display name before any legacy fallback generation.
+        if (symbol.underlying_symbol_name && !symbol.display_name) {
+            symbol.display_name = symbol.underlying_symbol_name;
         }
 
         // Ensure we have both symbol and underlying_symbol
