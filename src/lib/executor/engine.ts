@@ -101,7 +101,37 @@ class SentinelForgeExecutor {
    this.pipelineStep="IDLE";this.executionInFlight=false;this.notify();return{ok:true,contractId:cid}
   }catch(e){this.latestError=e instanceof Error?e.message:String(e);this.pipelineStep="IDLE";this.executionInFlight=false;this.notify();return{ok:false,error:this.latestError}}
  }
- private listenContract(cid:string,oc:OpenContract){if(!api_base.api)return;const send:any=(api_base.api as any).send.bind(api_base.api);const sub:any=send({proposal_open_contract:1,contract_id:cid,subscribe:1});if(sub?.then)void sub.then((x:any)=>this.handleContract(x?.subscription?.data||x));const un=api_base.api.onMessage().subscribe((m:any)=>{const x=m?.data||m;if(x?.msg_type!=="proposal_open_contract"||String(x?.proposal_open_contract?.contract_id)!==cid)return;this.handleContract(x);if(x.proposal_open_contract?.is_sold||x.proposal_open_contract?.status==="sold")un.unsubscribe?.()})}
+ private listenContract(cid:string,oc:OpenContract){
+  const api:any=api_base.api;if(!api)return;
+  const send:any=api.send.bind(api);
+  let subscriptionId:string|undefined;
+  let settled=false;
+  const forget=()=>{if(subscriptionId){try{void send({forget:subscriptionId})}catch{}}};
+  const un=api.onMessage().subscribe((m:any)=>{
+   const x=m?.data||m;
+   if(x?.msg_type!=="proposal_open_contract"||String(x?.proposal_open_contract?.contract_id)!==cid)return;
+   this.handleContract(x);
+   if(x.proposal_open_contract?.is_sold||x.proposal_open_contract?.status==="sold"){
+    settled=true;forget();un.unsubscribe?.();
+   }
+  });
+  Promise.race([
+   Promise.resolve(send({proposal_open_contract:1,contract_id:cid,subscribe:1})),
+   new Promise((_,reject)=>setTimeout(()=>reject(new Error("Contract status subscription timed out")),EXECUTION_TIMEOUT_MS)),
+  ]).then((x:any)=>{
+   subscriptionId=x?.subscription?.id;
+   if(x?.error)throw new Error(x.error.message||"Contract status subscription failed");
+   this.handleContract(x);
+   if(x?.proposal_open_contract?.is_sold||x?.proposal_open_contract?.status==="sold"){
+    settled=true;forget();un.unsubscribe?.();
+   }
+  }).catch((error:any)=>{
+   if(!settled){
+    un.unsubscribe?.();
+    executionJournal.logEvent({type:"EXECUTION_FAILED",signalId:oc.signalId,message:error?.message||"Contract status subscription failed.",details:{contractId:cid}});
+   }
+  });
+ }
  private handleContract(m:any){
   const p=m?.proposal_open_contract;if(!p)return;
   const cid=String(p.contract_id);const oc=this.open.get(cid);if(!oc)return;
