@@ -278,19 +278,21 @@ export function buildSmartchartsChampionAdapter(
             const subscriptionKey = `${request.symbol}-${request.granularity}`;
 
             // Build subscription request
-            const apiRequest: any = {
-                ticks_history: request.symbol,
-                subscribe: 1,
-                end: 'latest',
-                count: 1,
-            };
-
-            if (request.granularity === 0) {
-                apiRequest.style = 'ticks';
-            } else {
-                apiRequest.style = 'candles';
-                apiRequest.granularity = request.granularity;
-            }
+            const apiRequest: any = request.granularity === 0
+                ? {
+                      // Use Deriv's dedicated ticks stream for live ticks. Historical
+                      // data remains a separate ticks_history request in getQuotes().
+                      ticks: request.symbol,
+                      subscribe: 1,
+                  }
+                : {
+                      ticks_history: request.symbol,
+                      subscribe: 1,
+                      end: 'latest',
+                      count: 1,
+                      style: 'candles',
+                      granularity: request.granularity,
+                  };
 
             try {
                 const subscriptionId = transport.subscribe(apiRequest, (response: any) => {
