@@ -36,21 +36,12 @@
 .dtrader__grid main{min-width:0;min-height:0;display:flex;flex-direction:column;gap:16px}
 .dtrader__grid aside{min-width:0}
 
-/* chart */
-.dt-chart-card,.dtrader__panel{background:var(--dt-surface);border:1px solid var(--dt-border);border-radius:14px;box-shadow:var(--dt-shadow)}
-.dt-chart-card{overflow:hidden}
-.dt-chart-head{height:62px;padding:0 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--dt-border)}
-.dt-chart-head small{display:block;color:var(--dt-muted);font-size:9px;letter-spacing:.14em;font-weight:700}
-.dt-chart-head strong{display:block;font-size:14px;margin-top:3px;font-weight:700}
-.dt-chart-head>b{font:20px var(--dt-mono);font-weight:600}
-.dt-chart{height:480px;position:relative;overflow:hidden}
-.dt-chart-fallback{height:100%;min-height:420px;background:var(--dt-surface);display:flex;flex-direction:column;padding:20px}
-.dt-fallback-title{display:flex;justify-content:space-between;align-items:center;color:var(--dt-muted);font-size:12px}
-.dt-fallback-title b{font-size:24px;color:var(--dt-text);font:24px var(--dt-mono)}
-.dt-chart-fallback svg{width:100%;height:calc(100% - 62px);min-height:300px;margin-top:12px}
-.dt-chart-fallback polyline{stroke:var(--dt-accent);stroke-width:1.6}
-.dt-chart-fallback small{color:var(--dt-muted);font-size:11px;margin-top:8px}
-.dt-chart-loading{height:100%;display:grid;place-items:center;color:var(--dt-muted);font-size:12px}
+/* live price strip + panels */
+.dt-price-card,.dtrader__panel{background:var(--dt-surface);border:1px solid var(--dt-border);border-radius:14px;box-shadow:var(--dt-shadow)}
+.dt-price-head{height:62px;padding:0 16px;display:flex;align-items:center;justify-content:space-between}
+.dt-price-head small{display:block;color:var(--dt-muted);font-size:9px;letter-spacing:.14em;font-weight:700}
+.dt-price-head strong{display:block;font-size:14px;margin-top:3px;font-weight:700}
+.dt-price-head>b{font:20px var(--dt-mono);font-weight:600}
 
 /* panels */
 .dtrader__panel{padding:16px}
@@ -158,7 +149,7 @@
 .dtrader__deck>small{display:block;color:#9aa3ae;font-size:9px;line-height:1.5;margin-top:10px}
 .dtrader__message{margin-top:8px;background:#f6f7f9;border-radius:8px;padding:9px;font-size:10px;color:var(--dt-muted)}
 
-@media(max-width:1050px){.dtrader__grid{grid-template-columns:1fr}.dtrader__deck{position:relative;top:auto}.dt-chart{height:420px}}
+@media(max-width:1050px){.dtrader__grid{grid-template-columns:1fr}.dtrader__deck{position:relative;top:auto}}
 @media(max-width:700px){
   .dtrader--real{min-height:0}
   .dt-header{height:auto;min-height:58px;flex:0 0 auto;padding:8px 10px;gap:8px;flex-wrap:wrap;position:sticky}
@@ -168,11 +159,10 @@
   .dt-market-menu{position:fixed;top:70px;left:8px;right:8px}
   .dtrader__grid{padding:8px;display:flex;flex-direction:column;overflow-y:auto}
   .dtrader__grid main{display:contents}
-  .dt-chart-card{order:1}
+  .dt-price-card{order:1}
   .dtrader__digitpanel{order:2}
   .dtrader__sentinel{order:4}
   .dtrader__open-list{order:5}
-  .dt-chart{height:340px;min-height:260px}
   .dtrader__digits{grid-template-columns:repeat(5,1fr)}
   .dtrader__metrics{grid-template-columns:repeat(2,1fr)}
   .dtrader__signal{grid-template-columns:1fr;text-align:left}
