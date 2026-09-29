@@ -297,41 +297,113 @@ export default observer(function DTrader() {
         return () => { cancelled = true; window.clearTimeout(timer); };
     }, [client?.is_logged_in, client?.currency, symbol, type, barrier, duration, stake]);
 
-    // Poll every open, unresolved contract's status once a second. This used to lock the whole
-    // Buy button on a single open contract until it settled. Contracts are now tracked independently.
+    // Contract lifecycle follows Deriv's subscription model: one live
+    // proposal_open_contract stream per open contract, rather than polling every
+    // contract every second (which can exceed Deriv's shared trading-call budget).
     const openContractsRef = useRef<any[]>([]);
+    const contractSubscriptionsRef = useRef(new Map<number, { api: any; id: string | null; messageUnsub: (() => void) | null; binding: boolean }>());
     useEffect(() => { openContractsRef.current = openContracts; }, [openContracts]);
+
+    const updateContractFromResponse = (contractId: number, pc: any) => {
+        if (!pc) return;
+        const status = String(pc.status || (pc.is_sold ? 'sold' : 'open'));
+        setOpenContracts(prev => prev.map(x => x.id === contractId ? {
+            ...x,
+            status,
+            profit: Number(pc.profit || 0),
+            bid: Number(pc.bid_price || 0),
+            payout: Number(pc.payout || 0),
+            stale: false,
+        } : x));
+    };
+
+    const bindContractStatus = async (contractId: number, api: any) => {
+        const existing = contractSubscriptionsRef.current.get(contractId);
+        if (existing?.binding || (existing?.api === api && existing?.id)) return;
+
+        if (existing?.messageUnsub) {
+            try { existing.messageUnsub(); } catch {}
+        }
+        if (existing?.id && existing.api === api) {
+            try { await api.forget(existing.id); } catch {}
+        }
+
+        const state = { api, id: null as string | null, messageUnsub: null as (() => void) | null, binding: true };
+        contractSubscriptionsRef.current.set(contractId, state);
+
+        try {
+            state.messageUnsub = api.onMessage()?.subscribe(({ data }: { data: any }) => {
+                const current = contractSubscriptionsRef.current.get(contractId);
+                if (!current || current.api !== api) return;
+                const subscriptionId = data?.subscription?.id;
+                if (subscriptionId && current.id && subscriptionId !== current.id) return;
+                if (data?.error) {
+                    setMessage(data.error.message || 'Contract status stream failed.');
+                    return;
+                }
+                const pc = data?.proposal_open_contract;
+                if (!pc) return;
+                updateContractFromResponse(contractId, pc);
+
+                const settled = TERMINAL_STATUSES.includes(String(pc.status)) || pc.is_sold || pc.is_expired;
+                if (settled) {
+                    if (current.id) void api.forget(current.id).catch?.(() => {});
+                    current.messageUnsub?.();
+                    contractSubscriptionsRef.current.delete(contractId);
+                }
+            })?.unsubscribe;
+
+            const response = await api.send({
+                proposal_open_contract: 1,
+                contract_id: contractId,
+                subscribe: 1,
+            });
+            const current = contractSubscriptionsRef.current.get(contractId);
+            if (!current || current.api !== api) return;
+            if (response?.error) throw new Error(response.error.message || 'Contract status stream failed.');
+            const subscriptionId = response?.subscription?.id;
+            if (!subscriptionId) throw new Error('Deriv did not return a contract status subscription ID.');
+            current.id = subscriptionId;
+            updateContractFromResponse(contractId, response?.proposal_open_contract);
+        } catch (error: any) {
+            const current = contractSubscriptionsRef.current.get(contractId);
+            current?.messageUnsub?.();
+            contractSubscriptionsRef.current.delete(contractId);
+            setOpenContracts(prev => prev.map(x => x.id === contractId ? { ...x, stale: true } : x));
+            setMessage(error?.message || 'Unable to monitor contract status.');
+        } finally {
+            const current = contractSubscriptionsRef.current.get(contractId);
+            if (current) current.binding = false;
+        }
+    };
+
     useEffect(() => {
-        const failureCounts = new Map<number, number>();
-        const startTimes = new Map<number, number>();
-        const STALL_TIMEOUT_MS = 3 * 60 * 1000;
-        const timer = window.setInterval(async () => {
-            if (!chart_api.api?.send) return;
-            const pending = openContractsRef.current.filter(c => !TERMINAL_STATUSES.includes(c.status) && !c.stale);
-            for (const c of pending) {
-                if (!startTimes.has(c.id)) startTimes.set(c.id, Date.now());
-                try {
-                    const res = await sendWithTimeout(chart_api.api.send.bind(chart_api.api), { proposal_open_contract: 1, contract_id: c.id }, STATUS_TIMEOUT_MS);
-                    const pc = res?.proposal_open_contract;
-                    if (res?.error) throw new Error(res.error.message || 'Contract status request failed');
-                    failureCounts.set(c.id, 0);
-                    if (!pc) continue;
-                    setOpenContracts(prev => prev.map(x => x.id === c.id ? { ...x, status: pc.status, profit: Number(pc.profit || 0), bid: Number(pc.bid_price || 0), payout: Number(pc.payout || 0), stale: false } : x));
-                } catch {
-                    const n = (failureCounts.get(c.id) || 0) + 1;
-                    failureCounts.set(c.id, n);
-                    if (n >= 5) {
-                        setMessage('Losing connection to a contract’s status — check Reports in your Deriv account.');
-                        setOpenContracts(prev => prev.map(x => x.id === c.id ? { ...x, stale: true } : x));
-                    }
-                } finally {
-                    if (Date.now() - (startTimes.get(c.id) || Date.now()) > STALL_TIMEOUT_MS) {
-                        setOpenContracts(prev => prev.map(x => x.id === c.id ? { ...x, stale: true } : x));
-                    }
+        const ensureSubscriptions = () => {
+            const api = chart_api.api;
+            if (!api?.send || api.connection?.readyState !== WebSocket.OPEN) return;
+            for (const contract of openContractsRef.current) {
+                if (!TERMINAL_STATUSES.includes(String(contract.status)) && !contract.stale) {
+                    void bindContractStatus(Number(contract.id), api);
                 }
             }
-        }, 1000);
-        return () => window.clearInterval(timer);
+        };
+
+        const stopReady = chart_api.onReady(() => ensureSubscriptions());
+        ensureSubscriptions();
+
+        const cleanupTimer = window.setInterval(ensureSubscriptions, 5000);
+
+        return () => {
+            stopReady();
+            window.clearInterval(cleanupTimer);
+            for (const [id, sub] of contractSubscriptionsRef.current) {
+                try { sub.messageUnsub?.(); } catch {}
+                if (sub.id && sub.api === chart_api.api) {
+                    try { void sub.api.forget(sub.id); } catch {}
+                }
+                contractSubscriptionsRef.current.delete(id);
+            }
+        };
     }, []);
 
     useEffect(() => {
