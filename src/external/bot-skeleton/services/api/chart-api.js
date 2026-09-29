@@ -63,7 +63,9 @@ class ChartAPI {
         if (!this.api || this.time_interval) return;
         this.time_interval = setInterval(() => {
             if (this.api?.send) {
-                this.api.send({ time: 1 }).catch?.(() => {});
+                // Deriv recommends a periodic ping to keep the shared WebSocket
+                // alive and detect connectivity failures early.
+                this.api.send({ ping: 1 }).catch?.(() => {});
             }
         }, 30000);
     };
