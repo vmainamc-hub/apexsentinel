@@ -128,7 +128,7 @@ const transformations = {
         for (const symbol of activeSymbolsData) {
             const symbolCode = symbol.underlying_symbol || symbol.symbol;
             symbols.push({
-                display_name: symbol.display_name || symbolCode,
+                display_name: symbol.underlying_symbol_name || symbol.display_name || symbolCode,
                 market: symbol.market,
                 market_display_name: symbol.market_display_name,
                 subgroup: symbol.subgroup, // Map submarket to subgroup
@@ -136,8 +136,8 @@ const transformations = {
                 submarket: symbol.submarket,
                 submarket_display_name: symbol.submarket_display_name,
                 symbol: symbolCode,
-                symbol_type: symbol.symbol_type || '',
-                pip: symbol.pip || symbol.pip_size || 0.01,
+                symbol_type: symbol.underlying_symbol_type || symbol.symbol_type || '',
+                pip: symbol.pip_size || symbol.pip || 0.01,
                 exchange_is_open: symbol.exchange_is_open || 0,
                 is_trading_suspended: symbol.is_trading_suspended || 0,
                 delay_amount: symbol.delay_amount,
