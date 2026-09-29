@@ -1,9 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import { SmartChart, TGranularity } from '@deriv-com/smartcharts-champion';
-import { useDevice } from '@deriv-com/ui';
-import { useSmartChartAdaptor } from '@/hooks/useSmartChartAdaptor';
 import { generateOAuthURL } from '@/components/shared';
+import { api_base } from '@/external/bot-skeleton';
 import chart_api from '@/external/bot-skeleton/services/api/chart-api';
 import { derivBus } from '@/lib/deriv/tick-bus';
 import { useStore } from '@/hooks/useStore';
@@ -133,9 +131,13 @@ function labelFor(type: ContractType, barrier: number) {
 }
 
 export default observer(function DTrader() {
-    const { client, common, ui } = useStore();
-    const { isMobile } = useDevice();
-    const { adapterInitialized, chartData, getQuotes, subscribeQuotes, unsubscribeQuotes, error: chartError } = useSmartChartAdaptor();
+    const { client } = useStore();
+    // The shared Deriv connection (owned by APIBase) is the only transport DTrader uses.
+    const [apiReady, setApiReady] = useState(() => !!chart_api.api);
+    useEffect(() => {
+        const stop = chart_api.onReady(() => setApiReady(true));
+        return () => { stop(); };
+    }, []);
     const initialSymbol = useMemo(() => {
         try {
             const fromUrl = new URLSearchParams(window.location.search).get('symbol');
@@ -222,31 +224,44 @@ export default observer(function DTrader() {
         return { odd, even, under7, over2, danger };
     }, [ticks, type]);
 
+    // Market metadata comes straight from the shared APIBase active_symbols result.
     useEffect(() => {
-        if (!chartData.activeSymbols.length) return;
-        const live = chartData.activeSymbols.map((m: any) => ({
-            symbol: String(m.underlying_symbol || m.symbol),
-            name: String(m.display_name || m.name || m.underlying_symbol || m.symbol),
-            market: String(m.market || 'synthetic_index'),
-            pip_size: Number(m.pip_size || m.pip || 0.01),
-        })).filter((m: any) => m.symbol);
-        if (live.length) {
-            setMarkets(live);
-            if (!live.some(m => m.symbol === symbol)) setSymbol(live[0].symbol);
-        }
-    }, [chartData.activeSymbols]);
+        if (!apiReady) return;
+        let cancelled = false;
+        let timer: number | undefined;
+        const load = async (attempt = 0) => {
+            let raw: any[] = [];
+            try {
+                if (!Array.isArray(api_base.active_symbols) || !api_base.active_symbols.length) {
+                    if (api_base.active_symbols_promise) await api_base.active_symbols_promise;
+                    else await api_base.getActiveSymbols();
+                }
+                raw = Array.isArray(api_base.active_symbols) ? api_base.active_symbols : [];
+            } catch {
+                raw = [];
+            }
+            if (cancelled) return;
+            const live = raw.map((m: any) => ({
+                symbol: String(m.underlying_symbol || m.symbol),
+                name: String(m.underlying_symbol_name || m.display_name || m.name || m.underlying_symbol || m.symbol),
+                market: String(m.market || 'synthetic_index'),
+                pip_size: Number(m.pip_size || m.pip || 0.01),
+            })).filter((m: any) => m.symbol);
+            if (live.length) {
+                setMarkets(live);
+                setSymbol(current => (live.some(m => m.symbol === current) ? current : live[0].symbol));
+                return;
+            }
+            if (attempt < 18) timer = window.setTimeout(() => { void load(attempt + 1); }, 500);
+        };
+        void load();
+        return () => { cancelled = true; window.clearTimeout(timer); };
+    }, [apiReady]);
 
-    const quotesRef = useRef({ getQuotes, subscribeQuotes, unsubscribeQuotes });
+    // Live DTrader feed and historical ticks both come from the shared Deriv tick bus
+    // (one WebSocket, ticks_history + live ticks). No chart layer is involved.
     useEffect(() => {
-        quotesRef.current = { getQuotes, subscribeQuotes, unsubscribeQuotes };
-    }, [getQuotes, subscribeQuotes, unsubscribeQuotes]);
-
-    // Live DTrader feed is driven by the shared Deriv tick bus. Historical ticks are
-    // loaded through the SmartCharts adapter, but the cursor/distribution never depend
-    // on a chart subscription being healthy. This keeps one WebSocket while giving the
-    // trading surface its own explicit, continuously updating tick stream.
-    useEffect(() => {
-        if (!adapterInitialized) return;
+        if (!apiReady) return;
         let cancelled = false;
         let releaseBus: (() => void) | undefined;
         let releaseTick: (() => void) | undefined;
@@ -292,7 +307,7 @@ export default observer(function DTrader() {
             releaseHistory?.();
             releaseStatus?.();
         };
-    }, [symbol, adapterInitialized]);
+    }, [symbol, apiReady]);
 
     useEffect(() => {
         if (!client?.is_logged_in || !chart_api.api?.send) {
@@ -510,9 +525,6 @@ export default observer(function DTrader() {
 
     const filteredMarkets = markets.filter(m => (m.symbol + ' ' + m.name).toLowerCase().includes(search.toLowerCase()));
 
-    const chartSettings = useMemo(() => ({ assetInformation: false, countdown: true, isHighestLowestMarkerEnabled: false, language: common.current_language.toLowerCase(), position: ui.is_chart_layout_default ? 'bottom' : 'left', theme: ui.is_dark_mode_on ? 'dark' : 'light' }), [common.current_language, ui.is_chart_layout_default, ui.is_dark_mode_on]);
-    const smartChartData = useMemo(() => ({ activeSymbols: chartData.activeSymbols, tradingTimes: chartData.tradingTimes }), [chartData.activeSymbols, chartData.tradingTimes]);
-
     return (
         <div className='dtrader dtrader--real'>
             <div className='dt-header'>
@@ -526,9 +538,8 @@ export default observer(function DTrader() {
 
             <div className='dtrader__grid'>
                 <main>
-                    <section className='dt-chart-card'>
-                        <div className='dt-chart-head'><div><small>LIVE MARKET</small><strong>{selectedMarket?.name || symbol}</strong></div><b>{livePrice(ticks, decimals)}</b></div>
-                        <div className='dt-chart'>{adapterInitialized && chartData.activeSymbols.length ? <SmartChart id={'sentinel-dtrader-' + symbol} key={'sentinel-dtrader-' + symbol} symbol={symbol} barriers={[]} chartType='line' granularity={0 as TGranularity} isLive isMobile={isMobile} isConnectionOpened={!!chart_api.api} getQuotes={getQuotes} subscribeQuotes={subscribeQuotes} unsubscribeQuotes={unsubscribeQuotes} chartData={smartChartData} settings={chartSettings} enabledNavigationWidget={false} enabledChartFooter={false} showLastDigitStats={false} topWidgets={() => <></>} chartControlsWidgets={null} /> : <LiveChartFallback ticks={ticks} decimals={decimals} state={chartError ? 'Chart metadata unavailable — live tick feed is still active.' : !adapterInitialized ? 'Connecting to Deriv chart services…' : 'Loading Deriv market metadata…'} />}</div>
+                    <section className='dt-price-card'>
+                        <div className='dt-price-head'><div><small>LIVE MARKET</small><strong>{selectedMarket?.name || symbol}</strong></div><b>{livePrice(ticks, decimals)}</b></div>
                     </section>
 
                     <section className='dtrader__panel'>
@@ -636,15 +647,6 @@ export default observer(function DTrader() {
 });
 
 function livePrice(ticks: Tick[], decimals: number) { const value = ticks.length ? ticks[ticks.length - 1].quote : null; return value == null ? '—' : value.toFixed(decimals); }
-
-function LiveChartFallback({ ticks, decimals, state }: { ticks: Tick[]; decimals: number; state: string }) {
-    const points = ticks.slice(-120);
-    if (points.length < 2) return <div className='dt-chart-loading'>{state}</div>;
-    const values = points.map(t => t.quote);
-    const min = Math.min(...values), max = Math.max(...values), span = max - min || 1;
-    const path = values.map((v, i) => `${(i / (values.length - 1)) * 100},${92 - ((v - min) / span) * 78}`).join(' ');
-    return <div className='dt-chart-fallback'><div className='dt-fallback-title'><span>LIVE TICK PREVIEW</span><b>{values[values.length - 1].toFixed(decimals)}</b></div><svg viewBox='0 0 100 100' preserveAspectRatio='none' aria-label='Live tick preview'><polyline points={path} fill='none' vectorEffect='non-scaling-stroke' /></svg><small>{state}</small></div>;
-}
 
 function Metric({ l, v }: { l: string; v: string }) {
     return <div className='dtrader__metric'><small>{l}</small><b>{v}</b></div>;
