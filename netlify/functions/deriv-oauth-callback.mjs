@@ -27,7 +27,7 @@ export default async request => {
         const returnPath = safeReturnPath(transaction.returnPath);
         const destination = new URL(returnPath, config().siteOrigin);
         destination.searchParams.set('auth', 'connected');
-        return redirect(destination.toString(), 302, { 'set-cookie': [clear, sessionCookie(session)].join(', ') });
+        return redirect(destination.toString(), 302, { 'set-cookie': [clear, sessionCookie(session)] });
     } catch (error) {
         return redirect('/?auth_error=oauth_failed', 302, { 'set-cookie': clear });
     }
