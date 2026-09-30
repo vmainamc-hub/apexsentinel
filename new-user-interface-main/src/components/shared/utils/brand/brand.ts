@@ -16,7 +16,7 @@ type TPlatform = {
 
 const isDomainAllowed = (domain_name: string) => {
     const custom_domains = [
-        'riskmanagers.site',
+        'apexsentinell.netlify.app',
         'termicafx.site',
         'optimumtraders.site',
         'mrzetuzetu.site',
