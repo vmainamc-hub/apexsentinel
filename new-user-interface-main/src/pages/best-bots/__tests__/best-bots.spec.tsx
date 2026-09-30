@@ -32,13 +32,6 @@ describe('Best Bots domain catalogs', () => {
         });
     });
 
-    it('uses the same Risk Managers catalogue for Apex Sentinel', () => {
-        const risk = getBestBotsForFolder('riskmanagers.site');
-        const apex = getBestBotsForFolder('apex-sentinel');
-        expect(apex).toEqual(risk);
-        expect(apex).toHaveLength(15);
-    });
-
     it('does not leak another domain catalog for an unknown folder', () => {
         expect(getBestBotsForFolder('future-domain.site')).toEqual([]);
     });

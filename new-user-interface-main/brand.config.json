@@ -1,11 +1,11 @@
 {
-    "brand_name": "Apex Sentinel",
-    "brand_domain": "apexsentinell.netlify.app",
+    "brand_name": "Duke Trading Academy",
+    "brand_domain": "riskmanagers.site",
     "brand_hostname": {
-        "staging": "apexsentinell.netlify.app",
-        "production": "apexsentinell.netlify.app"
+        "staging": "riskmanagers.site",
+        "production": "riskmanagers.site"
     },
-    "domain_name": "apexsentinell.netlify.app",
+    "domain_name": "riskmanagers.site",
     "colors": {
         "primary": "#3b82f6",
         "secondary": "#64748b",
@@ -62,10 +62,10 @@
         "logo": {
             "type": "component",
             "component_name": "BrandLogo",
-            "alt_text": "Apex Sentinel",
+            "alt_text": "Trading Bot",
             "link_url": "/",
             "show_text": false,
-            "text": "Apex Sentinel"
+            "text": "Trading Bot"
         },
         "footer": {
             "enable_language_settings": false,
@@ -73,10 +73,10 @@
         },
         "hostname": {
             "production": {
-                "com": "apexsentinell.netlify.app"
+                "com": "riskmanagers.site"
             },
             "staging": {
-                "com": "apexsentinell.netlify.app"
+                "com": "riskmanagers.site"
             }
         },
         "auth2_url": {
