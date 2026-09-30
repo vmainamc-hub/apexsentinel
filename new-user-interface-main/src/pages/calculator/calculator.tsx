@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import './riskmanagers-tools.scss';
+import '../riskmanagers-tools.scss';
 
 const Calculator = () => {
     const [balance, setBalance] = useState('100');
