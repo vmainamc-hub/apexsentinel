@@ -36,7 +36,7 @@ export default defineConfig({
             { from: 'node_modules/@deriv-com/smartcharts-champion/dist/assets/*', to: 'assets/[name][ext]' },
             { from: 'node_modules/@deriv-com/smartcharts-champion/dist/assets/fonts/*', to: 'assets/fonts/[name][ext]' },
             { from: 'node_modules/@deriv-com/smartcharts-champion/dist/assets/shaders/*', to: 'assets/shaders/[name][ext]' },
-            { from: path.join(__dirname, 'public') },
+            { from: path.join(__dirname, 'public'), globOptions: { ignore: ['**/riskmanagers.site/**', '**/termicafx.site/**', '**/dollarsigns.site/**', '**/optimumtraders.site/**', '**/mafiahub.site/**', '**/masterhunter.site/**', '**/mrzetuzetu.site/**', '**/tradinghubs.site/**'] } },
         ],
     },
     html: { template: './index.html' },
