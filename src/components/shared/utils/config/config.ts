@@ -10,6 +10,7 @@ import type { AuthConfig } from '@/external/deriv-core';
 import { getInitialLanguage } from '@deriv-com/translations';
 import { DerivWSAccountsService } from '@/services/derivws-accounts.service';
 import brandConfig from '../../../../../brand.config.json';
+import { getRuntimeSiteConfig } from '@/config/runtime-site-config';
 
 // =============================================================================
 // Constants - Domain & Server Configuration (from brand.config.json)
@@ -99,6 +100,11 @@ export const getDebugServiceWorker = () => {
  * @param prompt - Optional prompt parameter ('registration' for sign-up flow)
  * @returns Promise with the OAuth URL string
  */
+export const getDomainConfig = () => ({ clientId: getRuntimeSiteConfig()?.deriv.oauthClientId || process.env.NEXT_PUBLIC_DERIV_OAUTH_CLIENT_ID || '', appId: getRuntimeSiteConfig()?.deriv.appId || process.env.NEXT_PUBLIC_DERIV_APP_ID || '', redirectUri: window.location.origin, botsFolder: getRuntimeSiteConfig()?.site.botsFolder || 'apex-sentinel' });
+export const getBestBotsFolder = () => getDomainConfig().botsFolder;
+export const buildBestBotsFileUrl = (folder:string,file:string) => '/'+encodeURI(folder)+'/'+encodeURIComponent(file);
+export const getBestBotsFileUrl = (file:string) => buildBestBotsFileUrl(getBestBotsFolder(),file);
+
 export const generateOAuthURL = async (prompt?: string): Promise<string> => {
     try {
         const clientId = process.env.NEXT_PUBLIC_DERIV_APP_ID;

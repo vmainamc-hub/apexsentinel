@@ -1,4 +1,5 @@
 import { configure } from 'mobx';
+import { initializeRuntimeSiteConfig } from './config/runtime-site-config';
 import ReactDOM from 'react-dom/client';
 import { AuthWrapper } from './app/AuthWrapper';
 // Removed AnalyticsInitializer import - analytics dependency removed
@@ -33,4 +34,4 @@ applyPrimaryColorFromConfig();
 // App Builder preview branding (incl. PREVIEW_READY handshake) is handled by the
 // src/preview/ listener, mounted from app-content only in the preview deployment
 // (NEXT_PUBLIC_APP_BUILD === 'true') and stripped from standalone partner deploys.
-ReactDOM.createRoot(document.getElementById('root')!).render(<AuthWrapper />);
+(async () => { await initializeRuntimeSiteConfig(); ReactDOM.createRoot(document.getElementById('root')!).render(<AuthWrapper />); })();
