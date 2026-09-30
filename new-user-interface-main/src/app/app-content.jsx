@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { observer } from 'mobx-react-lite';
 import { ToastContainer } from 'react-toastify';
 import AuthLoadingWrapper from '@/components/auth-loading-wrapper';
@@ -37,7 +37,6 @@ const AppContent = observer(() => {
     const symbols_loaded = React.useRef(false);
     const { connectionStatus } = useApiBase();
 
-    // Initialize dev mode keyboard shortcuts
     useDevMode();
 
     const livechat_client_information = {
@@ -53,7 +52,7 @@ const AppContent = observer(() => {
 
     useLiveChat(livechat_client_information);
 
-    useEffect(() => {
+    React.useEffect(() => {
         if (connectionStatus === CONNECTION_STATUS.OPENED) {
             setIsApiInitialized(true);
             common.setSocketOpened(true);
@@ -62,7 +61,7 @@ const AppContent = observer(() => {
         }
     }, [common, connectionStatus]);
 
-    useEffect(() => {
+    React.useEffect(() => {
         if (!connectionStatus) {
             setIsApiInitialized(true);
         }
@@ -110,7 +109,6 @@ const AppContent = observer(() => {
     React.useEffect(() => {
         if (!is_api_initialized) return undefined;
 
-        // Initialize core services
         ServerTime.init(common);
         app.setDBotEngineStores();
         ApiHelpers.setInstance(app.api_helpers_store);
@@ -118,32 +116,26 @@ const AppContent = observer(() => {
             GTM.init(store);
         });
 
-        // Load active symbols in the background — does not block UI
         if (!symbols_loaded.current) {
             symbols_loaded.current = true;
             const waitForHelpers = setInterval(() => {
                 if (ApiHelpers?.instance?.active_symbols) {
                     clearInterval(waitForHelpers);
-                    // eslint-disable-next-line no-console
                     console.log('[AppContent] Loading active symbols in background...');
                     ApiHelpers.instance.active_symbols
                         .retrieveActiveSymbols(true)
                         .then(() => {
-                            // eslint-disable-next-line no-console
                             console.log('[AppContent] Active symbols loaded successfully');
                         })
                         .catch(err => {
-                            // eslint-disable-next-line no-console
                             console.warn('[AppContent] Active symbols fetch error (non-blocking):', err?.message);
                         });
                 }
             }, 100);
-            // Give up after 15s
             setTimeout(() => clearInterval(waitForHelpers), 15000);
         }
 
         return undefined;
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [is_api_initialized]);
 
     if (common?.error) return null;
