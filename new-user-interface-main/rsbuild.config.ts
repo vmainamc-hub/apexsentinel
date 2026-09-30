@@ -31,6 +31,7 @@ export default defineConfig({
         },
     },
     output: {
+        injectStyles: true,
         copy: [
             { from: 'node_modules/@deriv-com/smartcharts-champion/dist/*', to: 'js/smartcharts/[name][ext]', globOptions: { ignore: ['**/*.LICENSE.txt'] } },
             { from: 'node_modules/@deriv-com/smartcharts-champion/dist/assets/*', to: 'assets/[name][ext]' },
