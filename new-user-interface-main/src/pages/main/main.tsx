@@ -19,7 +19,6 @@ import Calculator from '../calculator/calculator';
 import DigitsAnalysis from '../digits-analysis/digits-analysis';
 import { DBOT_TABS, TAB_IDS } from '@/constants/bot-contents';
 import { useStore } from '@/hooks/useStore';
-import { useDevice } from '@deriv-com/ui';
 import './main.scss';
 
 const HASHES = [
@@ -37,10 +36,9 @@ const HASHES = [
 ];
 
 const AppWrapper = observer(() => {
-    const { dashboard, run_panel, quick_strategy } = useStore();
+    const { dashboard, quick_strategy } = useStore();
     const { active_tab, setActiveTab, active_tour, setActiveTour, setTourDialogVisibility } = dashboard;
     const { is_open } = quick_strategy;
-    const { isDesktop } = useDevice();
     const location = useLocation();
     const navigate = useNavigate();
 
