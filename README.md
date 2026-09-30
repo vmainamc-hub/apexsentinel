@@ -1,35 +1,60 @@
-# Reef Sites
+# Apex Sentinel
 
-Reef Sites is a multi-tenant control plane for configuring and deploying many Deriv-powered trading websites from one shared GitHub repository. It contains:
+Standalone customer-facing Deriv trading website.
 
-- `deriv-sites-ui-kit-main`: owner and staff site manager (React/Vite/Supabase).
-- `new-user-interface-main`: generated trading-site runtime (React/RSBuild/Blockly).
-- `packages/*`: shared contracts for scopes, templates, features, runtime config, and deployment providers.
-- `deriv-sites-ui-kit-main/supabase`: database migrations and server-side integrations.
+## Architecture
 
-The generated runtime never receives a Deriv bearer or refresh token. OAuth state, PKCE, token exchange/refresh, account calls, and OTP requests run in Supabase Edge Functions. Each deployed site reaches those functions through its same-origin `/api` Netlify proxy and receives only an opaque HttpOnly session cookie.
-
-## Local commands
-
-Use Node 20.
-
-```bash
-npm install --ignore-scripts
-npm run dev:admin
-npm run dev:trading-web
-npm run build:admin
-npm run build:trading-web
+```
+GitHub -> Netlify -> Apex Sentinel -> Deriv
 ```
 
-The admin app defaults to Vite port 8080; the trading runtime defaults to port 5000. Local Supabase Edge Functions are expected at `127.0.0.1:54321` when testing the complete auth flow.
+There is no Supabase, Reef Sites control plane, tenant manager, site publisher, payment backend, or external authentication service in the runtime path.
 
-## Production workflow
+## Customer workspace
 
-1. An owner creates a tenant-owned site and completes the resumable 10-step wizard.
-2. Feature selection produces the minimum Deriv scope set.
-3. Publishing creates an atomic GitHub App commit under `sites/<site-id>/`.
-4. Netlify detects the commit and only builds the affected site.
-5. Signed webhooks update deployment/domain state and perform a health check.
-6. Owners and authorized staff see deployment history, real Deriv markup, and audit-backed errors.
+The UI preserves the RiskManagers-style customer workflow and provides these eleven sections:
 
-Start with [architecture](docs/ARCHITECTURE.md), [production setup](docs/SETUP_AND_OPERATIONS.md), [audit](docs/PLATFORM_AUDIT_2026-07-19.md), and [cleanup report](docs/CLEANUP_REPORT.md).
+1. Dashboard
+2. Bot Builder
+3. Free Bots
+4. DTrader
+5. AI Bots
+6. Auto Trades
+7. Trading View
+8. Copy Trading
+9. Calculator
+10. Analysis Tool
+11. Digits Analysis
+
+## Authentication
+
+Deriv OAuth 2.0 Authorization Code + PKCE is handled by Netlify Functions. The browser receives only an opaque HttpOnly session cookie and non-secret session metadata. OAuth access/refresh tokens remain server-side in the encrypted session cookie.
+
+Register this exact callback with the Deriv OAuth application:
+
+`https://apexsentinell.netlify.app/api/deriv-oauth-callback`
+
+Required Netlify variables:
+
+- `APEX_DERIV_CLIENT_ID`
+- `APEX_SITE_URL=https://apexsentinell.netlify.app`
+- `APEX_SESSION_SECRET` (32+ random characters)
+- `APEX_DERIV_CLIENT_SECRET` only when required by the registered Deriv client
+
+Deriv documents OAuth 2.0 with `client_id`, PKCE, a registered redirect URI, and server-side code exchange.
+
+## Local verification
+
+```bash
+npm install
+npm run type-check
+npm run test
+npm run test:functions
+npm run build
+```
+
+Netlify uses Node 20 and builds `new-user-interface-main/dist`.
+
+## Deployment
+
+Connect the repository to Netlify with the root `netlify.toml`. Set the four required environment variables before the first production OAuth test.
