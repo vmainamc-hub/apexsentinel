@@ -6,13 +6,14 @@ export default async request => {
         if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, { allow: 'POST' });
         assertSameOrigin(request);
         const body = await request.json().catch(() => ({}));
-        const scopes = Array.isArray(body.scopes) ? body.scopes.filter(scope => KNOWN_SCOPES.has(scope)) : ['trade'];
-        if (!scopes.length || scopes.length !== new Set(scopes).size) return json({ error: 'Invalid OAuth scopes' }, 400);
+        const requestedScopes = Array.isArray(body.scopes) ? body.scopes : ['trade'];
+        const scopes = requestedScopes.map(String);
+        if (!scopes.length || scopes.length !== new Set(scopes).size || scopes.some(scope => !KNOWN_SCOPES.has(scope))) return json({ error: 'Invalid OAuth scopes' }, 400);
         const returnPath = safeReturnPath(body.returnPath);
         const { clientId, redirectUri } = config();
         const state = crypto.randomBytes(24).toString('hex');
         const verifier = randomVerifier();
-        const transaction = seal({ state, verifier, returnPath, expiresAt: Date.now() + TX_MAX_AGE * 1000 });
+        const transaction = seal({ state, verifier, scopes, returnPath, expiresAt: Date.now() + TX_MAX_AGE * 1000 });
         const auth = new URL(AUTH_URL);
         auth.searchParams.set('response_type', 'code');
         auth.searchParams.set('client_id', clientId);
