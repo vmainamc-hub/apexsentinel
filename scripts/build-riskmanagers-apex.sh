@@ -61,6 +61,27 @@ EOF
 # Apex tenant folder; no bot is renamed, rewritten, or selectively removed.
 cp -a new-user-interface-main/public/riskmanagers.site "new-user-interface-main/public/$SITE_ID"
 
+# Generate the same-origin API surface used by the source platform.
+SUPABASE_REF="${APEX_SUPABASE_REF:-}"
+BACKEND_URL="${APEX_BACKEND_URL:-}"
+if [[ -n "$SUPABASE_REF" ]]; then
+  cat > new-user-interface-main/public/_redirects <<EOF
+/api/deriv-oauth-start https://${SUPABASE_REF}.supabase.co/functions/v1/deriv-oauth-start 200!
+/api/deriv-oauth-callback https://${SUPABASE_REF}.supabase.co/functions/v1/deriv-oauth-callback 200!
+/api/deriv-trader-session https://${SUPABASE_REF}.supabase.co/functions/v1/deriv-trader-session 200!
+/api/deriv-trader-accounts https://${SUPABASE_REF}.supabase.co/functions/v1/deriv-trader-accounts 200!
+/api/deriv-trader-otp https://${SUPABASE_REF}.supabase.co/functions/v1/deriv-trader-otp 200!
+EOF
+fi
+if [[ -n "$BACKEND_URL" ]]; then
+  BACKEND_URL="${BACKEND_URL%/}"
+  cat >> new-user-interface-main/public/_redirects <<EOF
+/api/bot-ideas/* ${BACKEND_URL}/api/bot-ideas/:splat 200!
+/api/best-bot-stats/* ${BACKEND_URL}/api/best-bot-stats/:splat 200!
+/api/scanner/* ${BACKEND_URL}/api/scanner/:splat 200!
+EOF
+fi
+
 # Tenant-only runtime substitutions. Trading logic and application code are
 # otherwise left at the pinned RiskManagers source revision.
 python3 - "$SITE_ID" "$APEX_HOSTNAME" <<'PY'
