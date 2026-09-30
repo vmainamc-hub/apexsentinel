@@ -1,0 +1,19 @@
+name: Apex Sentinel pre-deployment verification
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run type-check --workspace trading-bot-template
+      - run: npm run build:trading-web
+      - run: npm test --workspace trading-bot-template -- --runInBand src/pages/best-bots
