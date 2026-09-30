@@ -1,20 +1,31 @@
+# Apex Sentinel — standalone customer trading site.
+# Runtime path: GitHub -> Netlify -> Apex Sentinel -> Deriv.
 [build]
-  command = "npm ci && npm run build:trading-web"
+  command = "npm install --ignore-scripts && npm run build"
   publish = "new-user-interface-main/dist"
+  functions = "netlify/functions"
 
 [build.environment]
   NODE_VERSION = "20"
+  NPM_FLAGS = "--no-audit --no-fund"
+
+[functions]
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/api-not-found"
+  status = 404
 
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-  force = false
 
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self' https://auth.deriv.com; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://api.derivws.com wss://api.derivws.com; frame-src https://*.deriv.com https://api.binarytool.site; worker-src 'self' blob:; upgrade-insecure-requests"
+    Content-Security-Policy = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self' https://auth.deriv.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://survey.survicate.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://api.derivws.com wss://api.derivws.com https://charts.deriv.com https://api.binarytool.site; frame-src https://*.deriv.com https://charts.deriv.com https://api.binarytool.site; worker-src 'self' blob:; upgrade-insecure-requests"
     Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=()"
     Referrer-Policy = "strict-origin-when-cross-origin"
     X-Content-Type-Options = "nosniff"
