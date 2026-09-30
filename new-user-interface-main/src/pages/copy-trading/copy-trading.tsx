@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api_base } from '@/external/bot-skeleton';
-import './riskmanagers-tools.scss';
+import '../riskmanagers-tools.scss';
 
 type Trader = { id?: string; loginid?: string; name?: string; nickname?: string; profit?: number; followers?: number; [key: string]: any };
 
