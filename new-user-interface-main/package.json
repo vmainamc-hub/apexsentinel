@@ -17,7 +17,6 @@
         "test": "jest",
         "coverage": "jest --coverage --coverageReporters=json-summary",
         "coverage:total": "npm run coverage && node -p \"require('./coverage/coverage-summary.json').total.lines.pct\"",
-        "prepare": "husky install",
         "build:analyze": "BUNDLE_ANALYZE=true rsbuild build",
         "generate:brand-css": "node scripts/generate-brand-css.js",
         "dev:commit-push": "powershell -ExecutionPolicy Bypass -File scripts/dev-commit-push.ps1",
