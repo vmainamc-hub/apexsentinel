@@ -13,7 +13,7 @@ export type RuntimeSiteConfig = {
     generatedAt?: string;
     tenantId: string;
     template: { id: string; version: string };
-    site: { id: string; name: string; hostname: string; botsFolder?: string };
+    site: { id: string; name: string; hostname: string };
     branding: {
         brandName: string;
         logoUrl?: string;
