@@ -22,7 +22,9 @@ export default async request => {
         };
         if (clientSecret) params.client_secret = clientSecret;
         const tokenData = await tokenExchange(params);
-        const grantedScopes = String(tokenData.scope || url.searchParams.get('scope') || 'trade').split(/\s+/).filter(Boolean);
+        const grantedScopes = String(tokenData.scope || url.searchParams.get('scope') || '').split(/\s+/).filter(Boolean);
+        const requestedScopes = Array.isArray(transaction.scopes) ? transaction.scopes : ['trade'];
+        if (!requestedScopes.every(scope => grantedScopes.includes(scope))) return redirect('/?auth_error=scope_mismatch', 302, { 'set-cookie': clear });
         const session = buildSession(tokenData, grantedScopes);
         const returnPath = safeReturnPath(transaction.returnPath);
         const destination = new URL(returnPath, config().siteOrigin);
