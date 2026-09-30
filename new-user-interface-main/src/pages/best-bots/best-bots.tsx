@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { getBestBotsFileUrl, getBestBotsFolder } from '@/components/shared';
 import { DBOT_TABS } from '@/constants/bot-contents';
@@ -64,30 +64,6 @@ const StarRating = ({ profits, losses }: { profits: number; losses: number }) =>
         </span>
     );
 };
-
-const RISK_MANAGERS_BOTS: TBot[] = [
-    {
-        id: 'grffy',
-        name: 'grffy v1',
-        file: 'grffy v1.xml',
-        description: 'Grffy trading strategy.',
-        emoji: '🤖',
-    },
-    {
-        id: 'mrduke-speed',
-        name: 'Mr Duke Speed Bot.1',
-        file: 'Mr Duke Speed Bot.1.xml',
-        description: 'Speed-focused trading bot.',
-        emoji: '⚡',
-    },
-    {
-        id: 'wealth-generator',
-        name: 'Wealth Generator',
-        file: 'Wealth Generator.xml',
-        description: 'Automated wealth generation bot.',
-        emoji: '💰',
-    },
-];
 
 const APEX_SENTINEL_BOTS: TBot[] = [
     {
