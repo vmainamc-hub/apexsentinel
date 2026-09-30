@@ -10,31 +10,31 @@
 # session server-side and the opaque HttpOnly cookie first-party per site.
 [[redirects]]
   from = "/api/deriv-oauth-start"
-  to = "https://tsidnkyizypwlxtkkoyd.supabase.co/functions/v1/deriv-oauth-start"
+  to = "https://<APEX_SUPABASE_REF>.supabase.co/functions/v1/deriv-oauth-start"
   status = 200
   force = true
 
 [[redirects]]
   from = "/api/deriv-oauth-callback"
-  to = "https://tsidnkyizypwlxtkkoyd.supabase.co/functions/v1/deriv-oauth-callback"
+  to = "https://<APEX_SUPABASE_REF>.supabase.co/functions/v1/deriv-oauth-callback"
   status = 200
   force = true
 
 [[redirects]]
   from = "/api/deriv-trader-session"
-  to = "https://tsidnkyizypwlxtkkoyd.supabase.co/functions/v1/deriv-trader-session"
+  to = "https://<APEX_SUPABASE_REF>.supabase.co/functions/v1/deriv-trader-session"
   status = 200
   force = true
 
 [[redirects]]
   from = "/api/deriv-trader-accounts"
-  to = "https://tsidnkyizypwlxtkkoyd.supabase.co/functions/v1/deriv-trader-accounts"
+  to = "https://<APEX_SUPABASE_REF>.supabase.co/functions/v1/deriv-trader-accounts"
   status = 200
   force = true
 
 [[redirects]]
   from = "/api/deriv-trader-otp"
-  to = "https://tsidnkyizypwlxtkkoyd.supabase.co/functions/v1/deriv-trader-otp"
+  to = "https://<APEX_SUPABASE_REF>.supabase.co/functions/v1/deriv-trader-otp"
   status = 200
   force = true
 
