@@ -1,9 +1,11 @@
 [build]
-  command = "npm run build"
-  publish = "dist"
+  command = "bash scripts/build-riskmanagers-apex.sh"
+  publish = "new-user-interface-main/dist"
 
 [build.environment]
-  NODE_VERSION = "22"
+  NODE_VERSION = "20"
+  REEF_SITE_ID = "apex-sentinel"
+  REEF_SITE_CONFIG_URL = "/site.config.json"
 
 [[redirects]]
   from = "/*"
