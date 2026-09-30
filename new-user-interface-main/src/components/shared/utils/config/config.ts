@@ -133,7 +133,7 @@ export const getDomainConfig = (): DomainConfig => {
             clientId: runtime.deriv.oauthClientId || '',
             appId: runtime.deriv.appId || process.env.APP_ID || '',
             redirectUri: window.location.origin,
-            botsFolder: runtime.site.id,
+            botsFolder: runtime.site.botsFolder || runtime.site.hostname,
             features: {
                 botIdeas: enabled('bot_ideas', true),
                 scanner: enabled('scanner', true),
