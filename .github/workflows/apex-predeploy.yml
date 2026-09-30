@@ -3,6 +3,8 @@ name: Apex Sentinel pre-deployment verification
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
 
 jobs:
   verify:
