@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       HUSKY: '0'
     steps:
@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - run: npm ci --ignore-scripts
-      - run: npm run type-check --workspace trading-bot-template
-        continue-on-error: true
-      - run: npm run build:trading-web
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: npm run type-check
+      - run: npm run test:functions
+      - run: npm run build
