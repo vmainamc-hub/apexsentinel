@@ -12,6 +12,37 @@
 [functions]
   node_bundler = "esbuild"
 
+# Keep the frontend's /api contract while routing requests to Netlify Functions.
+[[redirects]]
+  from = "/api/deriv-oauth-start"
+  to = "/.netlify/functions/deriv-oauth-start"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/deriv-oauth-callback"
+  to = "/.netlify/functions/deriv-oauth-callback"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/deriv-trader-session"
+  to = "/.netlify/functions/deriv-trader-session"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/deriv-trader-accounts"
+  to = "/.netlify/functions/deriv-trader-accounts"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/deriv-trader-otp"
+  to = "/.netlify/functions/deriv-trader-otp"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
