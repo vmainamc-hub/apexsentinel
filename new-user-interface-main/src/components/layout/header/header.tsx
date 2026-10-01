@@ -132,7 +132,6 @@ const AppHeader = observer(() => {
             // Show login button only when fully settled (not during OAuth flow)
             else if (
                 position === 'right' &&
-                !isOAuthPending &&
                 ((!is_account_regenerating && !isAuthorizing && !activeLoginid) || authTimeout)
             ) {
                 return (
@@ -181,7 +180,6 @@ const AppHeader = observer(() => {
             activeAccount,
             authTimeout,
             is_account_regenerating,
-            isOAuthPending,
             authData,
             handleLogin,
             handleSignup,

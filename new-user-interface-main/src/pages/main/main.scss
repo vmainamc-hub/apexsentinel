@@ -35,11 +35,14 @@
     display: flex;
     overflow: hidden;
     width: 100%;
-    height: calc(100vh - 9rem);
+    height: 100%;
+    min-height: 0;
+    flex: 1;
     padding: 1.6rem;
+    background: var(--rm-shell-run-panel);
 
     @include mobile-or-tablet-screen {
-        height: calc(100vh - 6rem);
+        height: 100%;
         padding: 0;
     }
 
@@ -89,13 +92,13 @@
             }
 
             &__active {
-                background: rgba(255, 255, 255, 0.15);
-                color: #ffffff !important;
+                background: var(--rm-shell-nav-active);
+                color: var(--rm-shell-nav-text) !important;
                 border-radius: 6px;
             }
 
             &__item {
-                color: rgba(255, 255, 255, 0.75);
+                color: var(--rm-shell-nav-text);
                 display: flex;
                 align-items: center;
                 gap: 0.6rem;
@@ -106,8 +109,8 @@
                 margin: 0 2px;
 
                 &:not(.dc-tabs__active):hover {
-                    background: rgba(255, 255, 255, 0.07);
-                    color: #ffffff;
+                    background: var(--rm-shell-nav-hover);
+                    color: var(--rm-shell-nav-text);
                 }
 
                 &:not(.dc-tabs__active) {
@@ -120,7 +123,7 @@
             }
 
             &__list {
-                background: #000;
+                background: var(--rm-shell-nav);
                 justify-content: start;
                 padding: 4px 8px;
                 height: 48px;
@@ -141,7 +144,7 @@
                 &--header {
                     &--main {
                         &__tabs {
-                            background: #000;
+                            background: var(--rm-shell-nav);
 
                             @include mobile-or-tablet-screen {
                                 width: 100%;

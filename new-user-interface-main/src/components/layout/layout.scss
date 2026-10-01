@@ -1,14 +1,18 @@
 @use 'components/shared/styles/mixins' as *;
 
 .layout {
+    --app-header-height: var(--app-header-height);
+    min-height: 100dvh;
+    overflow: hidden;
+    background: var(--rm-shell-run-panel);
     display: flex;
     flex-direction: column;
     height: 100vh;
 
     .deriv-header {
-        background: #ff444f;
+        background: var(--rm-shell-top);
         height: 4rem;
-        min-height: 4rem;
+        min-height: var(--app-header-height);
     }
 
     &.quick-strategy-active {

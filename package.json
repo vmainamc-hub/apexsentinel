@@ -1,36 +1,24 @@
 {
-  "name": "reef-sites-workspace",
+  "name": "apex-sentinel",
   "private": true,
-  "version": "0.1.0",
-  "workspaces": [
-    "deriv-sites-ui-kit-main",
-    "new-user-interface-main",
-    "packages/*"
-  ],
+  "version": "1.0.0",
+  "workspaces": ["new-user-interface-main"],
   "scripts": {
-    "dev:admin": "npm run dev --workspace deriv-sites-ui-kit-main",
-    "build:admin": "npm run build --workspace deriv-sites-ui-kit-main",
-    "dev:trading-web": "npm run start --workspace trading-bot-template",
-    "build:trading-web": "npm run build --workspace trading-bot-template"
+    "dev": "npm run start --workspace trading-bot-template",
+    "build": "npm run build --workspace trading-bot-template",
+    "test": "npm run test --workspace trading-bot-template",
+    "type-check": "npm run type-check --workspace trading-bot-template",
+    "test:functions": "node netlify/tests/oauth-flow.test.mjs && node netlify/tests/handler-cookies.test.mjs"
   },
   "overrides": {
     "glob": "10.5.0",
     "cross-spawn": "^7.0.6",
     "braces": "^3.0.3",
-    "@semantic-release/npm": "^13.1.2",
     "undici": "^6.27.0",
     "minimatch": "^10.0.3",
     "picomatch": "^4.0.4",
-    "express": "4.21.2",
-    "ws": "8.21.1",
-    "uuid": "11.1.1",
     "form-data": "4.0.6",
-    "js-yaml": "4.1.2",
     "content-type": "1.0.5",
-    "@octokit/request": "10.0.8",
-    "framer-motion": "6.5.1",
-    "hosted-git-info@9.0.3": {
-      "lru-cache": "11.5.0"
-    }
+    "framer-motion": "6.5.1"
   }
 }

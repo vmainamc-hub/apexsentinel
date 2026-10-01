@@ -1,25 +1,15 @@
-import { getRuntimeSiteConfig } from '@/config/runtime-site-config';
-import { TraderGatewayClient, type TraderAccount, type TraderSessionStatus } from '@reef-sites/deriv-auth';
-import type { DerivScope } from '@reef-sites/shared-types';
+import { APP_CONFIG, type DerivScope } from '@/config/app-config';
+import { TraderGatewayClient, type TraderAccount, type TraderSessionStatus } from './trader-gateway';
 
 export type DerivAccount = TraderAccount;
 
-/**
- * Browser-safe facade for trader session, account and OTP operations.
- * OAuth bearer/refresh tokens never enter this application. The only persisted
- * values are non-secret account metadata and the selected account identifier.
- */
 export class DerivWSAccountsService {
     private static accountsFetchPromise: Promise<DerivAccount[]> | null = null;
     private static otpFetchPromises = new Map<string, Promise<string>>();
     private static gateway: TraderGatewayClient | null = null;
 
     private static getGateway(): TraderGatewayClient {
-        const runtime = getRuntimeSiteConfig();
-        if (!runtime?.deriv.gatewayUrl || !runtime.site.id) {
-            throw new Error('This site does not have a trader gateway configuration');
-        }
-        if (!this.gateway) this.gateway = new TraderGatewayClient(runtime.deriv.gatewayUrl, runtime.site.id);
+        if (!this.gateway) this.gateway = new TraderGatewayClient(APP_CONFIG.gatewayUrl);
         return this.gateway;
     }
 
@@ -55,8 +45,7 @@ export class DerivWSAccountsService {
     }
 
     static async createAuthorizationURL(returnPath = '/'): Promise<string> {
-        const runtime = getRuntimeSiteConfig();
-        const scopes: DerivScope[] = runtime?.deriv.requiredScopes?.length ? runtime.deriv.requiredScopes : ['trade'];
+        const scopes: DerivScope[] = [...APP_CONFIG.requiredScopes];
         const response = await this.getGateway().createAuthorization(scopes, returnPath);
         return response.authorizationUrl;
     }
@@ -82,7 +71,7 @@ export class DerivWSAccountsService {
         const request = this.getGateway()
             .websocketUrl(accountId)
             .then(response => {
-                if (!response.data?.url?.startsWith('wss://api.derivws.com/')) {
+                if (!response.data?.url?.startsWith('wss://api.derivws.com/trading/v1/options/ws/')) {
                     throw new Error('The trader gateway returned an invalid WebSocket URL');
                 }
                 return response.data.url;

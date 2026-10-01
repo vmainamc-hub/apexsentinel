@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { getBestBotsFileUrl, getBestBotsFolder } from '@/components/shared';
 import { DBOT_TABS } from '@/constants/bot-contents';
 import { load, save_types } from '@/external/bot-skeleton';
 import { useStore } from '@/hooks/useStore';
-import { API_BASE } from '@/utils/api-base';
 import { setActiveBot } from '@/utils/bot-tracker';
 import './best-bots.scss';
 
@@ -66,341 +65,32 @@ const StarRating = ({ profits, losses }: { profits: number; losses: number }) =>
     );
 };
 
-const RISK_MANAGERS_BOTS: TBot[] = [
+const APEX_SENTINEL_BOTS: TBot[] = [
     {
         id: 'grffy',
-        name: 'grffy v1',
-        file: 'grffy v1.xml',
-        description: 'Grffy trading strategy.',
+        name: 'Grffy',
+        file: 'grffy.xml',
+        description: 'Grffy trading strategy from the RiskManagers-style free bot library.',
         emoji: '🤖',
     },
     {
         id: 'mrduke-speed',
-        name: 'Mr Duke Speed Bot.1',
-        file: 'Mr Duke Speed Bot.1.xml',
-        description: 'Speed-focused trading bot.',
+        name: 'Speed Bot',
+        file: 'Speedhack by mrduke.site 00 (1).xml',
+        description: 'Speed-focused trading bot from the RiskManagers-style library.',
         emoji: '⚡',
     },
     {
         id: 'wealth-generator',
         name: 'Wealth Generator',
         file: 'Wealth Generator.xml',
-        description: 'Automated wealth generation bot.',
+        description: 'Automated strategy from the RiskManagers-style free bot library.',
         emoji: '💰',
-    },
-];
-
-const TERMICA_BOTS: TBot[] = [
-    {
-        id: 'termica-pro',
-        name: 'Termica Pro Bot',
-        file: 'D1-BY MR.DUKE(+254702490526).xml',
-        description: 'Professional Termica strategy tuned for consistent signal execution.',
-        emoji: '🔥',
-    },
-    {
-        id: 'termica-classic',
-        name: 'Termica Classic Bot',
-        file: 'D2 BY--MR.DUKE(+254702490526) (1).xml',
-        description: 'Classic Termica setup with simple, reliable trade logic.',
-        emoji: '⭐',
-    },
-    {
-        id: 'termica-rise-fall',
-        name: 'Termica Rise & Fall Bot',
-        file: 'The-D3 rise and fall.xml',
-        description: 'Termica trend strategy focused on rise and fall market moves.',
-        emoji: '📊',
-    },
-    {
-        id: 'termica-prime',
-        name: 'Termica Prime Bot',
-        file: 'D4 Update by MR.DUKE(+254702490526)FINAL  (%%%)) (1) (1) (1).xml',
-        description: 'Prime Termica configuration with refined entry conditions.',
-        emoji: '🏆',
-    },
-    {
-        id: 'termica-original',
-        name: 'Termica Original Bot',
-        file: 'D5 (Original version +254702490526).xml',
-        description: 'Original Termica-styled strategy for dependable bot loading.',
-        emoji: '🔵',
-    },
-    {
-        id: 'termica-fx',
-        name: 'Termica FX Bot',
-        file: 'D6 Deriv by Duke (1).xml',
-        description: 'Termica FX edition with smooth execution for active traders.',
-        emoji: '🎯',
-    },
-    {
-        id: 'termica-devil',
-        name: 'Termica Devil Bot',
-        file: 'BLACK DEVIL v2( By MR. DUKE).xml',
-        description: 'Aggressive Termica strategy with fast reaction logic.',
-        emoji: '😈',
-    },
-    {
-        id: 'termica-edge',
-        name: 'Termica Edge Bot',
-        file: 'grffy.xml',
-        description: 'Termica edge setup for volatility-based opportunities.',
-        emoji: '🔲',
-    },
-    {
-        id: 'termica-shield',
-        name: 'Termica Shield Bot',
-        file: 'Kiazala v1 by The Risk Manager (1).xml',
-        description: 'Risk-aware Termica bot built for disciplined capital protection.',
-        emoji: '🛡️',
-    },
-    {
-        id: 'termica-momentum',
-        name: 'Termica Momentum Bot',
-        file: 'KUMI NA NNE BORA V2  (1) (1).xml',
-        description: 'Momentum-focused Termica strategy with layered entries.',
-        emoji: '📈',
-    },
-    {
-        id: 'termica-slow',
-        name: 'Termica Pole Bot',
-        file: 'Mwenda Pole By The Risk Manager (1).xml',
-        description: 'Slow and steady Termica setup for conservative execution.',
-        emoji: '🐢',
-    },
-    {
-        id: 'termica-ai',
-        name: 'Termica AI Bot',
-        file: 'Simba Ai v1.xml',
-        description: 'AI-styled Termica bot combining pattern logic and smart exits.',
-        emoji: '🦁',
-    },
-    {
-        id: 'termica-turbo',
-        name: 'Termica Turbo Bot',
-        file: 'Speedhack by mrduke.site 00 (1).xml',
-        description: 'Fast Termica execution for high-movement market conditions.',
-        emoji: '🚀',
-    },
-    {
-        id: 'termica-digit-pro',
-        name: 'Termica Digit Pro Bot',
-        file: 'under 7,8,9= g2 bot 1==.xml',
-        description: 'Termica digit strategy for specialised over/under setups.',
-        emoji: '🎲',
-    },
-    {
-        id: 'termica-wealth',
-        name: 'Termica Wealth Bot',
-        file: 'Wealth Generator.xml',
-        description: 'Termica wealth strategy focused on structured account growth.',
-        emoji: '💰',
-    },
-];
-
-const OPTIMUM_BOTS: TBot[] = [
-    {
-        id: 'dollar-printer-original',
-        name: 'Dollar Printer Bot Original',
-        file: '$DollarprinterbotOrignal$ (1).xml',
-        description: 'Original Dollar Printer strategy tuned for steady returns.',
-        emoji: '💵',
-    },
-    {
-        id: 'dollar-printer-2025',
-        name: 'Dollar Printer 2025 Version',
-        file: '1 2025 $Orginal DollarPrinterBot  2025 Version $ (1).xml',
-        description: '2025 refreshed Dollar Printer with updated parameters.',
-        emoji: '💵',
-    },
-    {
-        id: 'tick-digit-over-2',
-        name: 'Tick Digit Over 2',
-        file: '1 tick DIgit Over 2.xml',
-        description: 'Specialised digit bot targeting over 2 on ticks.',
-        emoji: '🔢',
-    },
-    {
-        id: 'alpha-2025',
-        name: 'Alpha Version 2025',
-        file: '2025 Alpha Version 2025.xml',
-        description: 'Alpha 2025 strategy with fresh market logic.',
-        emoji: '🚀',
-    },
-    {
-        id: 'candle-mine-v3-updated',
-        name: 'Candle Mine v3 Updated',
-        file: '3 Updated Version Of Candle Mine????.xml',
-        description: 'Improved Candle Mine strategy for pattern trading.',
-        emoji: '🕯️',
-    },
-    {
-        id: 'auto-analysis',
-        name: 'Auto Analysis Bot',
-        file: 'AUTO ANALYSIS BOT.xml',
-        description: 'Automated analysis bot that adapts to market conditions.',
-        emoji: '📊',
-    },
-    {
-        id: 'candle-mine-3-1',
-        name: 'Candle Mine 3.1',
-        file: 'Candle mine version 3.1.xml',
-        description: 'Stable Candle Mine release version 3.1.',
-        emoji: '🕯️',
-    },
-    {
-        id: 'coolkid',
-        name: 'CoolKid Bot',
-        file: 'COOLKID.xml',
-        description: 'Fun and effective CoolKid trading logic.',
-        emoji: '😎',
-    },
-    {
-        id: 'deriv-wizard-1',
-        name: 'Deriv Wizard 1',
-        file: 'Deriv wizard 1.xml',
-        description: 'Wizard-style Deriv bot for reliable execution.',
-        emoji: '🧙',
-    },
-    {
-        id: 'digit-hyper',
-        name: 'Digit Hyper Bot',
-        file: 'Digit hyper.xml',
-        description: 'High-speed digit trading bot.',
-        emoji: '⚡',
-    },
-    {
-        id: 'even-odd-speed',
-        name: 'Even Odd Speed Bot',
-        file: 'Even odd speed bot.xml',
-        description: 'Fast even/odd market speed strategy.',
-        emoji: '🏎️',
-    },
-    {
-        id: 'ezekey-sniper-lite',
-        name: 'Ezekey Sniper Lite',
-        file: 'Ezekey sniper lite.xml',
-        description: 'Lightweight sniper bot for precise entries.',
-        emoji: '🎯',
-    },
-    {
-        id: 'falcon',
-        name: 'Falcon Bot',
-        file: 'FALCON BOT.xml',
-        description: 'Aggressive Falcon hunting strategy.',
-        emoji: '🦅',
-    },
-    {
-        id: 'gibuu-v8-pro',
-        name: 'GIBUU V8 Pro',
-        file: 'GIBUU V8 PRO.xml',
-        description: 'Pro-grade GIBUU V8 trading system.',
-        emoji: '🛡️',
-    },
-    {
-        id: 'hennessy-matrix-v5',
-        name: 'Hennessy Matrix V5 Original',
-        file: 'HENNESSY?? _MATRIX V5 BOT Orig..xml',
-        description: 'Original Hennessy Matrix V5 with matrix logic.',
-        emoji: '🔷',
-    },
-    {
-        id: 'kathy-entry-point',
-        name: 'Kathy Bot Entry With Point',
-        file: 'Kathy bot entry with point.xml',
-        description: 'Kathy bot using precise entry points.',
-        emoji: '📍',
-    },
-    {
-        id: 'm27-original',
-        name: 'M27 Original Version',
-        file: 'M27 Original version.xml',
-        description: 'Classic M27 original strategy.',
-        emoji: '🧩',
-    },
-    {
-        id: 'mask-evenodd',
-        name: 'Mask EvenOdd Bot',
-        file: 'Mask evenodd bot.xml',
-        description: 'Masked even/odd detection bot.',
-        emoji: '🎭',
-    },
-    {
-        id: 'mask-matches-speed',
-        name: 'Mask Matches Speed Bot',
-        file: 'mask matches speed bot ??.xml',
-        description: 'Speed-optimised matches/differs mask bot.',
-        emoji: '🏃',
-    },
-    {
-        id: 'matches-differs',
-        name: 'Matches and Differs Bot',
-        file: 'MATCHES AND DIFFERS BOT.xml',
-        description: 'Dedicated matches & differs trading bot.',
-        emoji: '🔄',
-    },
-    {
-        id: 'mega-pro',
-        name: 'Mega Pro Bot',
-        file: 'MEGA PRO BOT.xml',
-        description: 'High-performance Mega Pro strategy.',
-        emoji: '⭐',
-    },
-    {
-        id: 'night-cap-printer',
-        name: 'Night Cap Printer Bot',
-        file: 'NIGHT  CAP PRINTER BOT.xml',
-        description: 'Night-time focused cap printer bot.',
-        emoji: '🌙',
-    },
-    {
-        id: 'scaplex-ai-sn4',
-        name: 'SCAPLEX AI SN4',
-        file: 'SCAPLEX   Ai  SN4 (1) (1).xml',
-        description: 'SCAPLEX AI SN4 intelligent trading system.',
-        emoji: '🤖',
-    },
-    {
-        id: 'scaucer-speed',
-        name: 'Scaucer Speed Bot',
-        file: 'SCAUCER SPEED BOT ????.xml',
-        description: 'High-velocity Scaucer speed trading bot.',
-        emoji: '💨',
-    },
-    {
-        id: 'dollar-pro',
-        name: 'The Dollar Pro',
-        file: 'THE DOLLAR PRO.xml',
-        description: 'Premium Dollar Pro trading strategy.',
-        emoji: '💎',
-    },
-    {
-        id: 'trend-lover',
-        name: 'The Trend Lover',
-        file: 'THE TREND LOVER.xml',
-        description: 'Trend-following bot designed for strong moves.',
-        emoji: '📈',
-    },
-    {
-        id: 'trade-city-v2-1',
-        name: 'Trade City Bot v2.1',
-        file: 'TRADE CITY BOT VERSION 2.1.xml',
-        description: 'Trade City v2.1 city-style market navigation.',
-        emoji: '🏙️',
-    },
-    {
-        id: 'ultra-ai-2025',
-        name: 'Ultra AI 2025',
-        file: 'ULTRA AI 2025.xml',
-        description: 'Ultra AI 2025 next-gen intelligent bot.',
-        emoji: '🧠',
     },
 ];
 
 const BOTS_BY_FOLDER: Record<string, TBot[]> = {
-    'riskmanagers.site': RISK_MANAGERS_BOTS,
-    'termicafx.site': TERMICA_BOTS,
-    'optimumtraders.site': OPTIMUM_BOTS,
+    'apex-sentinel': APEX_SENTINEL_BOTS,
 };
 
 export const getBestBotsForFolder = (bots_folder: string) => BOTS_BY_FOLDER[bots_folder] ?? [];
