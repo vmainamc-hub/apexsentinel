@@ -129,21 +129,9 @@ const STANDALONE_CONFIG: DomainConfig = {
     ui: DEFAULT_DOMAIN_UI,
 };
 
-export const DOMAIN_CONFIG: Record<string, DomainConfig> = {
-    'apexsentinell.netlify.app': STANDALONE_CONFIG,
-};
-
-export const getDomainConfigForHost = (hostname: string): DomainConfig | undefined => {
-    const normalized = hostname.replace(/\\.$/, '').toLowerCase();
-    return DOMAIN_CONFIG[normalized];
-};
-
-export const getDomainConfig = (): DomainConfig => {
-    if (typeof window === 'undefined') return STANDALONE_CONFIG;
-    return getDomainConfigForHost(window.location.hostname) || STANDALONE_CONFIG;
-};
-
-export const getCurrentProductionDomain = () => 'apexsentinell.netlify.app';
+// Apex Sentinel is a single-site product: there is no per-hostname tenant table.
+// The public origin is configured once, server-side, via APEX_SITE_URL.
+export const getDomainConfig = (): DomainConfig => STANDALONE_CONFIG;
 
 export const getBestBotsFolder = () => getDomainConfig().botsFolder;
 export const getDomainFeatures = () => getDomainConfig().features;

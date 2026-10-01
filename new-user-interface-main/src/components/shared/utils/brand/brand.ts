@@ -15,17 +15,7 @@ type TPlatform = {
 };
 
 const isDomainAllowed = (domain_name: string) => {
-    const custom_domains = [
-        'riskmanagers.site',
-        'termicafx.site',
-        'optimumtraders.site',
-        'mrzetuzetu.site',
-        'masterhunter.site',
-        'tradinghubs.site',
-        'mafiahub.site',
-        'thenewui.netlify.app',
-        'newwapi.netlify.app',
-    ];
+    const custom_domains = [config_data.domain_name.toLowerCase()];
 
     const hostname = domain_name.split(':')[0].toLowerCase();
     if (custom_domains.some(domain => hostname === domain || hostname.endsWith(`.${domain}`))) {

@@ -1,11 +1,11 @@
 {
   "brand_name": "Apex Sentinel",
-  "brand_domain": "apexsentinell.netlify.app",
+  "brand_domain": "peppy-starship-b80f54.netlify.app",
   "brand_hostname": {
-    "staging": "apexsentinell.netlify.app",
-    "production": "apexsentinell.netlify.app"
+    "staging": "peppy-starship-b80f54.netlify.app",
+    "production": "peppy-starship-b80f54.netlify.app"
   },
-  "domain_name": "apexsentinell.netlify.app",
+  "domain_name": "peppy-starship-b80f54.netlify.app",
   "colors": {
     "primary": "#f97316",
     "secondary": "#1a1a2e",
@@ -18,76 +18,21 @@
     "black": "#050a14",
     "white": "#ffffff",
     "grey": {
-      "50": "#f8fafc",
-      "100": "#f1f5f9",
-      "200": "#e5e7eb",
-      "300": "#d1d5db",
-      "400": "#9ca3af",
-      "500": "#6b7280",
-      "600": "#4b5563",
-      "700": "#374151",
-      "800": "#1f2937",
-      "900": "#111827"
+      "50": "#f8fafc","100": "#f1f5f9","200": "#e5e7eb","300": "#d1d5db","400": "#9ca3af","500": "#6b7280","600": "#4b5563","700": "#374151","800": "#1f2937","900": "#111827"
     }
   },
   "typography": {
-    "font_family": {
-      "primary": "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-      "secondary": "Georgia, 'Times New Roman', Times, serif",
-      "monospace": "'Courier New', Courier, monospace"
-    },
-    "font_sizes": {
-      "xs": "0.75rem",
-      "sm": "0.875rem",
-      "base": "1rem",
-      "lg": "1.125rem",
-      "xl": "1.25rem",
-      "2xl": "1.5rem",
-      "3xl": "1.875rem",
-      "4xl": "2.25rem"
-    }
+    "font_family": {"primary":"Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif","secondary":"Georgia, 'Times New Roman', Times, serif","monospace":"'Courier New', Courier, monospace"},
+    "font_sizes": {"xs":"0.75rem","sm":"0.875rem","base":"1rem","lg":"1.125rem","xl":"1.25rem","2xl":"1.5rem","3xl":"1.875rem","4xl":"2.25rem"}
   },
-  "color_variants": {
-    "light_variants": [100, 200, 300, 400, 500],
-    "dark_variants": [600, 700, 800, 900],
-    "opacity_variants": [10, 20, 30, 40, 50, 60, 70, 80, 90]
-  },
-  "theme_config": {
-    "enable_dynamic_themes": false,
-    "auto_generate_variants": false,
-    "css_variable_prefix": "--brand"
-  },
+  "color_variants": {"light_variants":[100,200,300,400,500],"dark_variants":[600,700,800,900],"opacity_variants":[10,20,30,40,50,60,70,80,90]},
+  "theme_config": {"enable_dynamic_themes":false,"auto_generate_variants":false,"css_variable_prefix":"--brand"},
   "platform": {
-    "name": "Apex Sentinel",
-    "logo": {
-      "type": "component",
-      "component_name": "BrandLogo",
-      "alt_text": "Apex Sentinel",
-      "link_url": "/",
-      "show_text": false,
-      "text": "Apex Sentinel"
-    },
-    "footer": {
-      "enable_language_settings": false,
-      "enable_theme_toggle": true
-    },
-    "hostname": {
-      "production": {"com": "apexsentinell.netlify.app"},
-      "staging": {"com": "apexsentinell.netlify.app"}
-    },
-    "auth2_url": {
-      "production": "https://auth.deriv.com/oauth2/",
-      "staging": "https://auth.deriv.com/oauth2/"
-    },
-    "derivws": {
-      "url": {
-        "staging": "https://api.derivws.com/trading/v1/",
-        "production": "https://api.derivws.com/trading/v1/"
-      },
-      "directories": {
-        "options": "options/",
-        "derivatives": "derivatives/"
-      }
-    }
+    "name":"Apex Sentinel",
+    "logo":{"type":"component","component_name":"BrandLogo","alt_text":"Apex Sentinel","link_url":"/","show_text":false,"text":"Apex Sentinel"},
+    "footer":{"enable_language_settings":false,"enable_theme_toggle":true},
+    "hostname":{"production":{"com":"peppy-starship-b80f54.netlify.app"},"staging":{"com":"peppy-starship-b80f54.netlify.app"}},
+    "auth2_url":{"production":"https://auth.deriv.com/oauth2/","staging":"https://auth.deriv.com/oauth2/"},
+    "derivws":{"url":{"staging":"https://api.derivws.com/trading/v1/","production":"https://api.derivws.com/trading/v1/"},"directories":{"options":"options/","derivatives":"derivatives/"}}
   }
 }

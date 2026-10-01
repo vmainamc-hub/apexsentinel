@@ -32,12 +32,12 @@ Deriv OAuth 2.0 Authorization Code + PKCE is handled by Netlify Functions. The b
 
 Register this exact callback with the Deriv OAuth application:
 
-`https://apexsentinell.netlify.app/api/deriv-oauth-callback`
+`https://peppy-starship-b80f54.netlify.app/api/deriv-oauth-callback`
 
 Required Netlify variables:
 
 - `APEX_DERIV_CLIENT_ID`
-- `APEX_SITE_URL=https://apexsentinell.netlify.app`
+- `APEX_SITE_URL=https://peppy-starship-b80f54.netlify.app`
 - `APEX_SESSION_SECRET` (32+ random characters)
 - `APEX_DERIV_CLIENT_SECRET` only when required by the registered Deriv client
 

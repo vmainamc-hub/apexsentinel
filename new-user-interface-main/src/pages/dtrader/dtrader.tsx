@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { api_base } from '@/external/bot-skeleton';
+import { lastDigit } from '@/utils/last-digit';
 import '../riskmanagers-tools.scss';
 
 type ContractType = 'DIGITEVEN' | 'DIGITODD' | 'DIGITOVER' | 'DIGITUNDER' | 'DIGITMATCH' | 'DIGITDIFF';
@@ -46,13 +47,14 @@ const DTrader = observer(() => {
             try {
                 setStatus('Live');
                 const history = await (api_base.api as any).send({ ticks_history: symbol, count: 120, end: 'latest', style: 'ticks' });
-                const initial = (history?.history?.prices || []).map((p: number) => Number(String(p).replace('.', '').slice(-1))).filter((d: number) => d >= 0 && d <= 9);
+                const pip = Number(history?.pip_size);
+                const initial = (history?.history?.prices || []).map((p: number) => lastDigit(p, pip)).filter((d: number) => d >= 0 && d <= 9);
                 setDigits(initial.slice(-120));
                 setQuote(history?.history?.prices?.at?.(-1) ?? null);
                 subscription = (api_base.api as any).subscribe({ ticks: symbol }).subscribe((data: any) => {
                     if (data?.tick?.quote === undefined) return;
                     const value = Number(data.tick.quote);
-                    const last = Number(String(value).replace('.', '').slice(-1));
+                    const last = lastDigit(value, Number(data.tick.pip_size ?? pip));
                     setQuote(value);
                     setDigits(prev => [...prev, last].slice(-120));
                 });

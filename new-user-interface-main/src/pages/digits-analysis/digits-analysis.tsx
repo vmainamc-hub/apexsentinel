@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api_base } from '@/external/bot-skeleton';
+import { lastDigit } from '@/utils/last-digit';
 import '../riskmanagers-tools.scss';
 
 const MARKETS = ['R_10','R_25','R_50','R_75','R_100','1HZ10V','1HZ25V','1HZ50V','1HZ75V','1HZ100V'];
-
-const getDigit = (value: number) => Number(String(value).replace('.', '').slice(-1));
 
 const DigitsAnalysis = () => {
     const [symbol, setSymbol] = useState('R_50');
@@ -12,20 +11,32 @@ const DigitsAnalysis = () => {
     const [status, setStatus] = useState('Loading live digits…');
 
     useEffect(() => {
+        let cancelled = false;
         let sub: any;
+        let retry: ReturnType<typeof setTimeout> | undefined;
         const run = async () => {
-            if (!api_base.api) { setStatus('Connect to Deriv to load live digits.'); return; }
+            if (!api_base.api) {
+                setStatus('Connect to Deriv to load live digits.');
+                retry = setTimeout(run, 1000);
+                return;
+            }
             try {
                 const history = await (api_base.api as any).send({ ticks_history: symbol, count: 500, end: 'latest', style: 'ticks' });
-                setDigits((history?.history?.prices || []).map((p: number) => getDigit(p)));
+                if (cancelled) return;
+                const pip = Number(history?.pip_size);
+                setDigits((history?.history?.prices || []).map((p: number) => lastDigit(p, pip)).filter((d: number) => d >= 0 && d <= 9));
                 sub = (api_base.api as any).subscribe({ ticks: symbol }).subscribe((data: any) => {
-                    if (data?.tick?.quote !== undefined) setDigits(prev => [...prev, getDigit(Number(data.tick.quote))].slice(-500));
+                    if (data?.tick?.quote === undefined) return;
+                    const d = lastDigit(data.tick.quote, Number(data.tick.pip_size ?? pip));
+                    if (d >= 0 && d <= 9) setDigits(prev => [...prev, d].slice(-500));
                 });
-                setStatus('Live');
-            } catch (e) { setStatus(e instanceof Error ? e.message : 'Unable to load digit history.'); }
+                if (cancelled) sub?.unsubscribe?.();
+                else setStatus('Live');
+            } catch (e) { if (!cancelled) setStatus(e instanceof Error ? e.message : 'Unable to load digit history.'); }
         };
+        setDigits([]);
         run();
-        return () => sub?.unsubscribe?.();
+        return () => { cancelled = true; if (retry) clearTimeout(retry); sub?.unsubscribe?.(); };
     }, [symbol]);
 
     const counts = useMemo(() => Array.from({length:10}, (_, d) => digits.filter(x => x === d).length), [digits]);

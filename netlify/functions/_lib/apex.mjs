@@ -28,15 +28,27 @@ export function config() {
     };
 }
 
+// A plain object (or array value) passed to `new Response` is flattened to ONE
+// comma-joined Set-Cookie header, which browsers reject. Each cookie must be its
+// own header line, so array values are appended individually.
+export function buildHeaders(base = {}, extra = {}) {
+    const headers = new Headers();
+    for (const [name, value] of Object.entries({ ...base, ...extra })) {
+        if (Array.isArray(value)) value.forEach(item => headers.append(name, item));
+        else if (value !== undefined && value !== null) headers.set(name, value);
+    }
+    return headers;
+}
+
 export function json(body, status = 200, extraHeaders = {}) {
     return new Response(JSON.stringify(body), {
         status,
-        headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...extraHeaders },
+        headers: buildHeaders({ 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }, extraHeaders),
     });
 }
 
 export function redirect(url, status = 302, extraHeaders = {}) {
-    return new Response(null, { status, headers: { location: url, ...extraHeaders } });
+    return new Response(null, { status, headers: buildHeaders({ location: url }, extraHeaders) });
 }
 
 export function cookie(name, value, maxAge, { httpOnly = true, sameSite = 'Lax', path = '/', secure = true } = {}) {
@@ -71,7 +83,7 @@ export function unseal(value) {
 
 export function sameOrigin(request) {
     const origin = request.headers.get('origin');
-    if (!origin) return true;
+    if (!origin) return request.headers.get('sec-fetch-site') !== 'cross-site';
     return origin === config().siteOrigin;
 }
 
