@@ -11,7 +11,8 @@
     "dev:admin": "npm run dev --workspace deriv-sites-ui-kit-main",
     "build:admin": "npm run build --workspace deriv-sites-ui-kit-main",
     "dev:trading-web": "npm run start --workspace trading-bot-template",
-    "build:trading-web": "npm run build --workspace trading-bot-template"
+    "build:trading-web": "npm run build --workspace trading-bot-template",
+    "test:functions": "node --test netlify/functions/__tests__/deriv-auth.test.js"
   },
   "overrides": {
     "glob": "10.5.0",
