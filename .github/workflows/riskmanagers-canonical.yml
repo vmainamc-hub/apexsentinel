@@ -1,7 +1,7 @@
 name: Apex Sentinel canonical-tree verification
 on:
   push:
-    branches: [riskmanagers-site-reproduction]
+    branches: [riskmanagers-site-reproduction, riskmanagers-site-reproduction-consolidated]
   pull_request:
     branches: [riskmanagers-site-reproduction]
 jobs:
