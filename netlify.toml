@@ -1,45 +1,48 @@
 # Apex Sentinel — standalone customer trading site.
 # Runtime path: GitHub -> Netlify -> Apex Sentinel -> Deriv.
 [build]
-  command = "npm install --ignore-scripts && npm run build"
+  command = "npm ci && npm run build:trading-web"
   publish = "new-user-interface-main/dist"
   functions = "netlify/functions"
 
 [build.environment]
   NODE_VERSION = "20"
-  NPM_FLAGS = "--no-audit --no-fund"
+  HUSKY = "0"
 
 [functions]
   node_bundler = "esbuild"
 
-# Keep the frontend's /api contract while routing requests to Netlify Functions.
+# Same-origin Deriv trader BFF.
 [[redirects]]
   from = "/api/deriv-oauth-start"
-  to = "/.netlify/functions/deriv-oauth-start"
+  to = "/.netlify/functions/deriv-auth/oauth-start"
   status = 200
   force = true
-
 [[redirects]]
   from = "/api/deriv-oauth-callback"
-  to = "/.netlify/functions/deriv-oauth-callback"
+  to = "/.netlify/functions/deriv-auth/oauth-callback"
   status = 200
   force = true
-
 [[redirects]]
   from = "/api/deriv-trader-session"
-  to = "/.netlify/functions/deriv-trader-session"
+  to = "/.netlify/functions/deriv-auth/trader-session"
   status = 200
   force = true
-
 [[redirects]]
   from = "/api/deriv-trader-accounts"
-  to = "/.netlify/functions/deriv-trader-accounts"
+  to = "/.netlify/functions/deriv-auth/trader-accounts"
+  status = 200
+  force = true
+[[redirects]]
+  from = "/api/deriv-trader-otp"
+  to = "/.netlify/functions/deriv-auth/trader-otp"
   status = 200
   force = true
 
+# Optional Express/PostgreSQL backend for bot ideas, best-bot stats and scanner.
 [[redirects]]
-  from = "/api/deriv-trader-otp"
-  to = "/.netlify/functions/deriv-trader-otp"
+  from = "/api/*"
+  to = "/.netlify/functions/api-proxy"
   status = 200
   force = true
 
