@@ -66,7 +66,7 @@ const StarRating = ({ profits, losses }: { profits: number; losses: number }) =>
     );
 };
 
-const RISK_MANAGERS_BOTS: TBot[] = [
+const APEX_SENTINEL_BOTS: TBot[] = [
     {
         id: 'grffy',
         name: 'grffy v1',
@@ -398,7 +398,7 @@ const OPTIMUM_BOTS: TBot[] = [
 ];
 
 const BOTS_BY_FOLDER: Record<string, TBot[]> = {
-    'riskmanagers.site': RISK_MANAGERS_BOTS,
+    'apex-sentinel': APEX_SENTINEL_BOTS,
     'termicafx.site': TERMICA_BOTS,
     'optimumtraders.site': OPTIMUM_BOTS,
 };

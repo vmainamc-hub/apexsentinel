@@ -1,4 +1,4 @@
-project_id = "tsidnkyizypwlxtkkoyd"
+project_id = "apex-sentinel"
 
 [functions.check-domain]
 verify_jwt = false

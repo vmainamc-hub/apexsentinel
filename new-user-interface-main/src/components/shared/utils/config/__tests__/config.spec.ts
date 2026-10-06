@@ -7,6 +7,7 @@ describe('runtime-only site configuration', () => {
     it('does not expose a hardcoded production hostname configuration', () => {
         expect(getDomainConfigForHost('termicafx.site')).toBeUndefined();
         expect(getDomainConfigForHost('riskmanagers.site')).toBeUndefined();
+        expect(getDomainConfigForHost('peppy-starship-b80f54.netlify.app')).toBeUndefined();
     });
 
     it('builds an encoded per-site bot URL', () => {

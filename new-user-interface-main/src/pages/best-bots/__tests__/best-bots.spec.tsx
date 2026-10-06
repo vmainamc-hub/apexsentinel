@@ -21,15 +21,16 @@ describe('Best Bots domain catalogs', () => {
         });
     });
 
-    it('keeps the original Risk Managers bot names for the Risk Managers folder', () => {
-        const bots = getBestBotsForFolder('riskmanagers.site');
+    it('serves the Apex Sentinel catalogue from its own folder', () => {
+        const bots = getBestBotsForFolder('apex-sentinel');
 
-        expect(bots).toHaveLength(15);
-        expect(bots.every(bot => bot.name === bot.file.replace(/\.xml$/, ''))).toBe(true);
-        expect(bots[0]).toMatchObject({
-            name: 'D1-BY MR.DUKE(+254702490526)',
-            file: 'D1-BY MR.DUKE(+254702490526).xml',
-        });
+        expect(bots.map(bot => bot.name)).toEqual(['grffy v1', 'Mr Duke Speed Bot.1', 'Wealth Generator']);
+        expect(bots.every(bot => bot.file.endsWith('.xml'))).toBe(true);
+    });
+
+    it('no longer resolves the inherited RiskManagers folder', () => {
+        expect(getBestBotsForFolder('riskmanagers.site')).toEqual([]);
+    });
     });
 
     it('does not leak another domain catalog for an unknown folder', () => {

@@ -1,0 +1,166 @@
+'use strict';
+// Shared helpers for the Apex Sentinel same-origin Deriv BFF.
+// No database, no third-party platform: session state lives in AES-256-GCM
+// sealed, HttpOnly cookies. Tokens are never exposed to browser JavaScript.
+const crypto = require('crypto');
+
+const b64u = buf => Buffer.from(buf).toString('base64url');
+const fromB64u = str => Buffer.from(str, 'base64url');
+
+const DERIV_AUTHORIZATION_URL = 'https://auth.deriv.com/oauth2/auth';
+const DERIV_TOKEN_URL = 'https://auth.deriv.com/oauth2/token';
+const DERIV_API_BASE_URL = 'https://api.derivws.com';
+const KNOWN_SCOPES = ['trade', 'account_manage', 'payment', 'application_read'];
+
+const SESSION_COOKIE = 'apex_trader_session';
+const TX_COOKIE = 'apex_oauth_tx';
+const MAX_COOKIE_VALUE = 3800; // stay below the ~4096 byte browser cookie limit
+
+const env = () => ({
+    clientId: process.env.DERIV_OAUTH_CLIENT_ID || '',
+    appId: process.env.DERIV_APP_ID || '',
+    siteId: process.env.SITE_ID || 'apex-sentinel',
+    origin: (process.env.SITE_ORIGIN || process.env.URL || '').replace(/\/$/, ''),
+    redirectUri: process.env.DERIV_REDIRECT_URI || '',
+    allowedScopes: (process.env.DERIV_ALLOWED_SCOPES || 'trade').split(/[\s,]+/).filter(Boolean),
+    production: process.env.CONTEXT === 'production' || process.env.NODE_ENV === 'production',
+});
+
+const sealKey = () => {
+    const raw = process.env.SESSION_SECRET ? fromB64u(process.env.SESSION_SECRET) : null;
+    if (!raw || raw.length !== 32) throw Object.assign(new Error('SESSION_SECRET must be a base64url 32-byte key'), { code: 'server_misconfigured', status: 500 });
+    return raw;
+};
+
+const seal = value => {
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv('aes-256-gcm', sealKey(), iv);
+    const ct = Buffer.concat([cipher.update(JSON.stringify(value), 'utf8'), cipher.final()]);
+    const out = `v1.${b64u(iv)}.${b64u(cipher.getAuthTag())}.${b64u(ct)}`;
+    if (out.length > MAX_COOKIE_VALUE) throw Object.assign(new Error('Session too large'), { code: 'session_too_large', status: 502 });
+    return out;
+};
+
+const unseal = value => {
+    try {
+        const [v, iv, tag, ct] = String(value || '').split('.');
+        if (v !== 'v1' || !iv || !tag || !ct) return null;
+        const d = crypto.createDecipheriv('aes-256-gcm', sealKey(), fromB64u(iv));
+        d.setAuthTag(fromB64u(tag));
+        return JSON.parse(Buffer.concat([d.update(fromB64u(ct)), d.final()]).toString('utf8'));
+    } catch {
+        return null;
+    }
+};
+
+const safeEqual = (a, b) => {
+    const x = Buffer.from(String(a || ''));
+    const y = Buffer.from(String(b || ''));
+    return x.length === y.length && crypto.timingSafeEqual(x, y);
+};
+
+const sha256 = v => b64u(crypto.createHash('sha256').update(v).digest());
+const randomSecret = (n = 32) => b64u(crypto.randomBytes(n));
+
+const header = (event, name) => {
+    const h = event.headers || {};
+    const key = Object.keys(h).find(k => k.toLowerCase() === name.toLowerCase());
+    return key ? h[key] : undefined;
+};
+
+const readCookie = (event, name) => {
+    for (const part of String(header(event, 'cookie') || '').split(';')) {
+        const [k, ...rest] = part.trim().split('=');
+        if (k === name) return decodeURIComponent(rest.join('='));
+    }
+    return null;
+};
+
+const cookie = (name, value, maxAge) =>
+    `${name}=${encodeURIComponent(value)}; Path=/api; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax`;
+const clearCookie = name => `${name}=; Path=/api; Max-Age=0; HttpOnly; Secure; SameSite=Lax`;
+
+const respond = (status, body, cookies = [], extra = {}) => ({
+    statusCode: status,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...extra },
+    ...(cookies.length ? { multiValueHeaders: { 'Set-Cookie': cookies } } : {}),
+    body: JSON.stringify(body),
+});
+const redirect = (location, cookies = []) => ({
+    statusCode: 302,
+    headers: { Location: location, 'Cache-Control': 'no-store' },
+    ...(cookies.length ? { multiValueHeaders: { 'Set-Cookie': cookies } } : {}),
+    body: '',
+});
+const fail = (status, code, message, id, cookies = []) =>
+    respond(status, { error: { code, message }, correlationId: id }, cookies);
+
+// Same-origin only. Browsers omit Origin on same-origin GETs; when present it
+// must match, and every state-changing request must carry a matching Origin.
+const originOk = (event, mutating) => {
+    const { origin, production } = env();
+    const sent = header(event, 'origin');
+    if (!sent) return !mutating;
+    if (sent === origin) return true;
+    if (!production) {
+        try { return ['localhost', '127.0.0.1'].includes(new URL(sent).hostname); } catch { return false; }
+    }
+    return false;
+};
+
+const siteOk = event => header(event, 'x-reef-site-id') === env().siteId;
+
+const derivError = async res => {
+    const body = await res.json().catch(() => ({}));
+    const first = body && body.errors && body.errors[0];
+    return { status: res.status, code: (first && first.code) || body.error || 'DerivRequestFailed' };
+};
+
+const tokenRequest = async params => {
+    const res = await fetch(DERIV_TOKEN_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+        body: new URLSearchParams(params),
+    });
+    if (!res.ok) throw Object.assign(new Error('Deriv token request failed'), await derivError(res));
+    return res.json();
+};
+
+const derivRequest = async (path, { accessToken, method = 'GET' }) => {
+    const res = await fetch(`${DERIV_API_BASE_URL}${path}`, {
+        method,
+        headers: { Authorization: `Bearer ${accessToken}`, 'Deriv-App-ID': env().appId, Accept: 'application/json' },
+    });
+    if (!res.ok) throw Object.assign(new Error('Deriv API request failed'), await derivError(res));
+    return res.json();
+};
+
+// Returns the current session payload plus, when a refresh happened, a fresh
+// Set-Cookie value so rotated refresh tokens are persisted.
+const loadSession = async (event, { csrf = false } = {}) => {
+    if (!siteOk(event)) throw Object.assign(new Error('Site identifier is invalid'), { code: 'site_mismatch', status: 400 });
+    if (!originOk(event, csrf)) throw Object.assign(new Error('Origin is not allowed'), { code: 'origin_denied', status: 403 });
+    const s = unseal(readCookie(event, SESSION_COOKIE));
+    if (!s || !s.sessionExp || Date.parse(s.sessionExp) <= Date.now()) {
+        throw Object.assign(new Error('Trader authentication is required'), { code: 'not_authenticated', status: 401 });
+    }
+    if (csrf && !safeEqual(header(event, 'x-csrf-token'), s.csrf)) {
+        throw Object.assign(new Error('CSRF validation failed'), { code: 'csrf_invalid', status: 403 });
+    }
+    let refreshedCookie = null;
+    if (Date.parse(s.accessExp) <= Date.now() + 60_000) {
+        if (!s.rt) throw Object.assign(new Error('Deriv session expired'), { code: 'session_expired', status: 401 });
+        const t = await tokenRequest({ grant_type: 'refresh_token', refresh_token: s.rt, client_id: env().clientId });
+        s.at = t.access_token;
+        if (t.refresh_token) s.rt = t.refresh_token;
+        s.accessExp = new Date(Date.now() + (t.expires_in || 3600) * 1000).toISOString();
+        if (t.scope) s.scopes = t.scope.split(/\s+/).filter(Boolean);
+        refreshedCookie = cookie(SESSION_COOKIE, seal(s), Math.max(60, Math.floor((Date.parse(s.sessionExp) - Date.now()) / 1000)));
+    }
+    return { s, refreshedCookie };
+};
+
+module.exports = {
+    env, seal, unseal, safeEqual, sha256, randomSecret, header, readCookie, cookie, clearCookie,
+    respond, redirect, fail, originOk, siteOk, tokenRequest, derivRequest, loadSession,
+    DERIV_AUTHORIZATION_URL, KNOWN_SCOPES, SESSION_COOKIE, TX_COOKIE,
