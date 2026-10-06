@@ -1,11 +1,11 @@
 {
   "brand_name": "Apex Sentinel",
-  "brand_domain": "apexsentinell.netlify.app",
+  "brand_domain": "peppy-starship-b80f54.netlify.app",
   "brand_hostname": {
-    "staging": "apexsentinell.netlify.app",
-    "production": "apexsentinell.netlify.app"
+    "staging": "peppy-starship-b80f54.netlify.app",
+    "production": "peppy-starship-b80f54.netlify.app"
   },
-  "domain_name": "apexsentinell.netlify.app",
+  "domain_name": "peppy-starship-b80f54.netlify.app",
   "colors": {
     "primary": "#f97316",
     "secondary": "#1a1a2e",
@@ -72,8 +72,8 @@
       "enable_theme_toggle": true
     },
     "hostname": {
-      "production": {"com": "apexsentinell.netlify.app"},
-      "staging": {"com": "apexsentinell.netlify.app"}
+      "production": {"com": "peppy-starship-b80f54.netlify.app"},
+      "staging": {"com": "peppy-starship-b80f54.netlify.app"}
     },
     "auth2_url": {
       "production": "https://auth.deriv.com/oauth2/",

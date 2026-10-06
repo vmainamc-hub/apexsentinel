@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { getBestBotsFileUrl, getBestBotsFolder } from '@/components/shared';
 import { DBOT_TABS } from '@/constants/bot-contents';
@@ -68,15 +68,15 @@ const StarRating = ({ profits, losses }: { profits: number; losses: number }) =>
 const APEX_SENTINEL_BOTS: TBot[] = [
     {
         id: 'grffy',
-        name: 'Grffy',
-        file: 'grffy.xml',
+        name: 'grffy v1',
+        file: 'grffy v1.xml',
         description: 'Grffy trading strategy from the RiskManagers-style free bot library.',
         emoji: '🤖',
     },
     {
         id: 'mrduke-speed',
-        name: 'Speed Bot',
-        file: 'Speedhack by mrduke.site 00 (1).xml',
+        name: 'Mr Duke Speed Bot.1',
+        file: 'Mr Duke Speed Bot.1.xml',
         description: 'Speed-focused trading bot from the RiskManagers-style library.',
         emoji: '⚡',
     },
@@ -184,6 +184,8 @@ const BotCard = observer(({ bot, stats }: { bot: TBot; stats: TBotStats | undefi
         </div>
     );
 });
+
+const API_BASE = '/api';
 
 const BestBots = () => {
     const [statsMap, setStatsMap] = useState<Record<string, TBotStats>>({});
