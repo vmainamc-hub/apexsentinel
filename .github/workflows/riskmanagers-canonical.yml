@@ -1,0 +1,20 @@
+name: Apex Sentinel canonical-tree verification
+on:
+  push:
+    branches: [riskmanagers-site-reproduction, riskmanagers-site-reproduction-consolidated]
+  pull_request:
+    branches: [riskmanagers-site-reproduction]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      HUSKY: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: node --test netlify/functions/__tests__/deriv-auth.test.js
