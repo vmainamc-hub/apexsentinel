@@ -60,7 +60,7 @@ const DEFAULT_DOMAIN_FEATURES: DomainFeatureFlags = {
 };
 
 const DEFAULT_DOMAIN_UI: DomainUIConfig = {
-    brandName: APP_CONFIG.brandName,
+    brandName: 'Apex Sentinel',
     primaryColor: '#f97316',
     secondaryColor: '#1a1a2e',
     accentColor: '#2196f3',
@@ -124,13 +124,13 @@ const DEFAULT_DOMAIN_UI: DomainUIConfig = {
 };
 
 const STANDALONE_CONFIG: DomainConfig = {
-    botsFolder: APP_CONFIG.botsFolder,
+    botsFolder: 'apex-sentinel',
     features: DEFAULT_DOMAIN_FEATURES,
     ui: DEFAULT_DOMAIN_UI,
 };
 
 export const DOMAIN_CONFIG: Record<string, DomainConfig> = {
-    'apexsentinell.netlify.app': STANDALONE_CONFIG,
+    'peppy-starship-b80f54.netlify.app': STANDALONE_CONFIG,
 };
 
 export const getDomainConfigForHost = (hostname: string): DomainConfig | undefined => {
