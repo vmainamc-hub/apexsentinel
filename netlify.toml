@@ -1,7 +1,7 @@
 # Apex Sentinel — standalone customer trading site.
 # Runtime path: GitHub -> Netlify -> Apex Sentinel -> Deriv.
 [build]
-  command = "npm ci && npm run build:trading-web"
+  command = "npm ci && npm run build"
   publish = "new-user-interface-main/dist"
   functions = "netlify/functions"
 
