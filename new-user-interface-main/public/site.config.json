@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "tenantId": "apex-sentinel",
+  "template": {
+    "id": "deriv-bot",
+    "version": "1.0.0"
+  },
+  "site": {
+    "id": "apex-sentinel",
+    "name": "Apex Sentinel",
+    "hostname": "peppy-starship-b80f54.netlify.app"
+  },
+  "branding": {
+    "brandName": "Apex Sentinel",
+    "logoUrl": "/brand-logo.png",
+    "faviconUrl": "/deriv-logo.svg",
+    "darkModeDefault": false,
+    "theme": {
+      "primaryColor": "#3b82f6",
+      "secondaryColor": "#64748b",
+      "accentColor": "#8b5cf6",
+      "headerBgColor": "#0f172a",
+      "headerTextColor": "#ffffff"
+    },
+    "customCssVars": {}
+  },
+  "deriv": {
+    "oauthClientId": "",
+    "appId": "",
+    "gatewayUrl": "/api",
+    "requiredScopes": [
+      "trade"
+    ],
+    "environment": "production"
+  },
+  "features": {
+    "bot_ideas": true,
+    "best_bots": true,
+    "scanner": true,
+    "auto_trades": true,
+    "combo_trades": true,
+    "chart": true,
+    "tutorials": true,
+    "manual_trading": true,
+    "copy_trading": true,
+    "percentage_tool": true,
+    "print_popups": false
+  },
+  "bots": [
+    {
+      "id": "grffy-v1",
+      "name": "grffy v1",
+      "filePath": "/apex-sentinel/grffy v1.xml",
+      "displayOrder": 1,
+      "isActive": true
+    },
+    {
+      "id": "mrduke-speed",
+      "name": "Mr Duke Speed Bot.1",
+      "filePath": "/apex-sentinel/Mr Duke Speed Bot.1.xml",
+      "displayOrder": 2,
+      "isActive": true
+    },
+    {
+      "id": "wealth-generator",
+      "name": "Wealth Generator",
+      "filePath": "/apex-sentinel/Wealth Generator.xml",
+      "displayOrder": 3,
+      "isActive": true
+    }
+  ]
+}
