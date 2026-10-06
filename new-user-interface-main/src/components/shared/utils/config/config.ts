@@ -59,7 +59,7 @@ interface DomainConfig {
     ui: DomainUIConfig;
 }
 
-const DEFAULT_BOTS_FOLDER = 'optimumtraders.site';
+const DEFAULT_BOTS_FOLDER = 'apex-sentinel';
 const DEFAULT_DOMAIN_FEATURES: DomainFeatureFlags = {
     botIdeas: true,
     scanner: true,
@@ -71,7 +71,7 @@ const DEFAULT_DOMAIN_FEATURES: DomainFeatureFlags = {
 };
 
 const DEFAULT_DOMAIN_UI: DomainUIConfig = {
-    brandName: 'Deriv Bot',
+    brandName: 'Apex Sentinel',
     primaryColor: '#f97316',
     secondaryColor: '#1a1a2e',
     accentColor: '#2196f3',
