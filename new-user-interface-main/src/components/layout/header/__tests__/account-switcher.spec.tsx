@@ -85,10 +85,23 @@ describe('AccountSwitcher', () => {
         expect(container).toBeEmptyDOMElement();
     });
 
-    it('renders active account type and balance', () => {
+    // The header no longer renders a "Real account" / "Demo account" text label: the account type is conveyed by
+    // the currency button and the `acc-info--is-virtual` modifier on the account info block.
+    it('renders active real account currency and balance without the virtual modifier', () => {
         render(<AccountSwitcher activeAccount={mockActiveAccount} />);
-        expect(screen.getByText('Real account')).toBeInTheDocument();
+        expect(screen.getByText('USD', { selector: 'button.acc-info__currency-button' })).toBeInTheDocument();
+        expect(screen.getByTestId('dt_acc_info')).not.toHaveClass('acc-info--is-virtual');
         expect(screen.getByTestId('dt_balance')).toHaveTextContent('100.00 USD');
+    });
+
+    it('renders active demo account with the virtual modifier', () => {
+        render(
+            <AccountSwitcher
+                activeAccount={{ ...mockActiveAccount, loginid: 'VRTC456', isVirtual: true, balance: '9992.15' }}
+            />
+        );
+        expect(screen.getByTestId('dt_acc_info')).toHaveClass('acc-info--is-virtual');
+        expect(screen.getByTestId('dt_balance')).toHaveTextContent('9992.15 USD');
     });
 
     it('opens dropdown on click when multiple accounts exist', () => {

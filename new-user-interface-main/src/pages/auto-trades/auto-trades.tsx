@@ -2055,7 +2055,7 @@ const AutoTrades = observer(() => {
                                             onClick={handleRun}
                                             disabled={!client.is_logged_in || selectedMarketSymbols.length === 0}
                                         >
-                                            ▶ Run Auto Trades
+                                            ▶ Start Trading
                                         </button>
                                     ) : (
                                         <button className='auto-trades-controls__stop' onClick={handleStop}>

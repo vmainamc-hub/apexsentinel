@@ -113,7 +113,7 @@ describe('<AutoTrades />', () => {
             expect(screen.getByText('0/13 selected')).toBeInTheDocument();
         });
 
-        expect(screen.getByRole('button', { name: /Run Auto Trades/i })).toBeDisabled();
+        expect(screen.getByRole('button', { name: /Start Trading/i })).toBeDisabled();
         expect(screen.getByText(/Select at least one market to show live quotes/i)).toBeInTheDocument();
 
         await user.click(screen.getByRole('button', { name: 'Select all' }));
@@ -122,7 +122,7 @@ describe('<AutoTrades />', () => {
             expect(screen.getByText('13/13 selected')).toBeInTheDocument();
         });
 
-        expect(screen.getByRole('button', { name: /Run Auto Trades/i })).not.toBeDisabled();
+        expect(screen.getByRole('button', { name: /Start Trading/i })).not.toBeDisabled();
     });
 
     it('shows analysis ticks control for all trade types', async () => {
@@ -212,7 +212,7 @@ describe('<AutoTrades />', () => {
         render(<AutoTrades />);
 
         await user.selectOptions(screen.getAllByRole('combobox')[0], 'RUNHIGH');
-        await user.click(screen.getByRole('button', { name: /Run Auto Trades/i }));
+        await user.click(screen.getByRole('button', { name: /Start Trading/i }));
 
         await waitFor(() => {
             expect(tickSubscribers['1HZ10V']).toBeDefined();
@@ -289,7 +289,7 @@ describe('<AutoTrades />', () => {
 
         render(<AutoTrades />);
 
-        await user.click(screen.getByRole('button', { name: /Run Auto Trades/i }));
+        await user.click(screen.getByRole('button', { name: /Start Trading/i }));
 
         await waitFor(() => {
             expect(tickSubscribers['1HZ10V']).toBeDefined();

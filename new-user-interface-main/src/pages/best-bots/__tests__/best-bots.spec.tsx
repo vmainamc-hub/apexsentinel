@@ -31,7 +31,6 @@ describe('Best Bots domain catalogs', () => {
     it('no longer resolves the inherited RiskManagers folder', () => {
         expect(getBestBotsForFolder('riskmanagers.site')).toEqual([]);
     });
-    });
 
     it('does not leak another domain catalog for an unknown folder', () => {
         expect(getBestBotsForFolder('future-domain.site')).toEqual([]);

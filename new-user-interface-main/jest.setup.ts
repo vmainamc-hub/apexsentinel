@@ -49,3 +49,14 @@ global.fetch = jest.fn(() =>
         json: () => Promise.resolve({}),
     })
 ) as jest.Mock;
+
+// jsdom 20 (jest-environment-jsdom 29) does not expose crypto.randomUUID, which browsers provide and the app uses
+// (combo rows, journal ids, chart ids, upload ids). Polyfill it from Node only when the environment lacks it.
+if (typeof globalThis.crypto?.randomUUID !== 'function') {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { randomUUID } = require('crypto');
+    Object.defineProperty(globalThis, 'crypto', {
+        value: Object.assign(globalThis.crypto ?? {}, { randomUUID }),
+        configurable: true,
+    });
+}
